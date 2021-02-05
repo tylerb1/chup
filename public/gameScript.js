@@ -11,13 +11,13 @@ var baseSpawnFrequency = 1;
 var spawnFrequencyVariation = 2;
 
 // create inner circle
-var innerCircleRadius = 30;
+var innerCircleRadius = 20;
 var innerCirclePath = new Path.Circle(view.center, innerCircleRadius);
 innerCirclePath.strokeColor = 'black';
 innerCirclePath.fillColor = 'black';
 
 // create outer circle
-var outerCircleRadius = view.size.width / 3;
+var outerCircleRadius = (view.size.width / 2) - 16;
 var outerCirclePath = new Path.Circle(view.center, outerCircleRadius);
 outerCirclePath.strokeColor = 'black';
 

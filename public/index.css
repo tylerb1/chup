@@ -1,6 +1,7 @@
 html,
 body {
     height: 100%;
+    width: 100%;
 }
 
 /* Scale canvas with resize attribute to full size */

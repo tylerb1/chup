@@ -17,7 +17,7 @@ innerCirclePath.strokeColor = 'black';
 innerCirclePath.fillColor = 'black';
 
 // create outer circle
-var outerCircleRadius = (view.size.width / 2) - 16;
+var outerCircleRadius = window.innerWidth > window.innerHeight ? (window.innerHeight / 2) - 16 : (window.innerWidth / 2) - 16;
 var outerCirclePath = new Path.Circle(view.center, outerCircleRadius);
 outerCirclePath.strokeColor = 'black';
 

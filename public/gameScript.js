@@ -101,10 +101,12 @@
             wiggle.delta += 0.6;
             wiggle.fullPath.rotate(10, wiggle.fullPath.internalBounds.center);
         } else {
-            wiggles.map((w) => {
-                if (w.isFalling) w.fullPath.remove();
+            for (var i = 0; i < wiggles.length; i++) {
+              if (wiggles[i].isFalling) wiggles[i].fullPath.remove();
+            }
+            wiggles = wiggles.filter(function(w) { 
+              return !w.isFalling 
             });
-            wiggles = wiggles.filter((w) => !w.isFalling);
         }
     }
 
@@ -137,7 +139,7 @@
 
       // check if mouse hit any wiggles
       var wiggleIntersections = {};
-      wiggles.forEach((wiggle) => {
+      wiggles.forEach(function(wiggle) {
           if (!wiggle.isFalling && !(wiggle.id in wiggleIntersections)) {
               var ixns = wiggle.currentPath.getIntersections(lastMouseMovement);
               if (ixns.length > 0) {
@@ -148,8 +150,10 @@
       });
       
       // drop any wiggles that were hit
-      Object.keys(wiggleIntersections).forEach(id => {
-          var wiggleHit = wiggles.find(w => w.id == id)
+      Object.keys(wiggleIntersections).forEach(function(id) {
+          var wiggleHit = wiggles.find(function(w) { 
+            return w.id == id 
+          })
           dropWiggle(wiggleHit, wiggleIntersections[id]);
       });
     }
@@ -159,7 +163,9 @@
           
       // remove hit wiggle from scene
         wiggleHit.currentPath.remove();
-        var indexToRemove = wiggles.findIndex(w => w.id == wiggleHit.id)
+        var indexToRemove = wiggles.findIndex(function(w) { 
+          return w.id == wiggleHit.id 
+        })
         wiggles.splice(indexToRemove, 1);
 
         // split wiggle that was hit at intersection point & create falling wiggles
@@ -174,7 +180,7 @@
     function addFallingWiggle(wigglePath, strokeColor) {
         wigglePath.strokeColor = strokeColor;    
         var wiggleData = {
-            id: `w-${nWiggles}`, 
+            id: 'w' + nWiggles.toString(), 
             fullPath: wigglePath,
             delta: 0.4,
             isFalling: true
@@ -185,7 +191,7 @@
 
     function addNewWiggle(wigglePath, timeCreated) {
         var wiggleData = {
-            id: `w-${nWiggles}`, 
+            id: 'w' + nWiggles.toString(), 
             fullPath: wigglePath,
             currentPath: new Path(),
             timeCreated: timeCreated,

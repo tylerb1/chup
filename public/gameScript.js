@@ -3,7 +3,7 @@ var wiggles = [];
 var nWiggles = 0;
 var timeToNextWiggle = (Math.random() * 2) + 1;
 var wigglesLetThrough = 0;
-var mousePaths = [];
+var mouseTrails = [];
 var curveTime = 3;
 var endWigglinessFactor = 10;
 var baseNumberWiggleSegments = 8;
@@ -54,11 +54,11 @@ function onFrame(event) {
     }
     
     // animate mouse trails
-    for (var i = 0; i < mousePaths.length; i++) {
-        if (event.time - mousePaths[i].timeCreated > 2) {
-            mousePaths.splice(i, 1);
+    for (var i = 0; i < mouseTrails.length; i++) {
+        if (event.time - mouseTrails[i].timeCreated > 2) {
+            mouseTrails.splice(i, 1);
         } else {
-            mousePaths[i].path.opacity -= 0.1;
+            mouseTrails[i].path.opacity -= 0.1;
         }
     }
     
@@ -118,7 +118,7 @@ function onMouseUp(event) {
         path: mpClone,
         timeCreated: event.time
     };
-  mousePaths.push(mp);
+  mouseTrails.push(mp);
   mousePath.remove();
 }
 function onMouseDown(event) {
@@ -127,6 +127,9 @@ function onMouseDown(event) {
 }
 function onMouseDrag(event) {
   mousePath.add(event.point);
+  if (mousePath.segments.length > 30) {
+    mousePath.removeSegments(0, mousePath.segments.length - 30);
+  }
   mousePath.strokeColor = {
         gradient: {
             stops: ['white', 'blue']
@@ -135,7 +138,12 @@ function onMouseDrag(event) {
         destination: mousePath.lastSegment.point
     }
   var mousePathLength = mousePath.segments.length;
-  var lastMouseMovement = new Path([mousePath.segments[mousePathLength - 2], mousePath.segments[mousePathLength - 1]]);
+  var lastMouseMovement = new Path(
+    [
+      mousePath.segments[mousePathLength - 2], 
+      mousePath.segments[mousePathLength - 1]
+    ]
+  );
 
   // check if mouse hit any wiggles
   var wiggleIntersections = {};

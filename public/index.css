@@ -4,6 +4,10 @@ pre {
   background: lightcyan;
   text-align: center;
 }
+canvas {
+ width: 500px;
+ height: 500px;
+}
 .center {
   text-align: center;
   padding: 10px;

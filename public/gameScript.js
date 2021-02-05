@@ -32,27 +32,24 @@ outerCirclePath.strokeColor = 'black';
 
 // create a new wiggling path
 function createWiggle(timeCreated) {
-  console.log(project.activeLayer.children.length);
-  console.log(mouseTrails);
+  // set start & end
+  var circleOffset = Math.random();
+  var startPoint = innerCirclePath.getPointAt(circleOffset * innerCirclePath.length);
+  var endPoint = outerCirclePath.getPointAt(circleOffset * outerCirclePath.length);
+  var path = new Path.Line(startPoint, endPoint);
 
-    // set start & end
-    var circleOffset = Math.random();
-    var startPoint = innerCirclePath.getPointAt(circleOffset * innerCirclePath.length);
-    var endPoint = outerCirclePath.getPointAt(circleOffset * outerCirclePath.length);
-    var path = new Path.Line(startPoint, endPoint);
-
-    // randomize all in-between points on the wiggle
-    var numWiggleSections = (Math.random() + 0.5) * baseNumberWiggleSegments;
-    var wigglePoints = [];
-    for (var i = 1; i < numWiggleSections - 1; i++) {
-        var linePoint = path.getPointAt((i / numWiggleSections) * path.length)
-        var variation = (2 * (Math.random() - 0.5)) * (endWigglinessFactor * i);
-        var randomizedLinePoint = linePoint + { x: variation, y: variation };
-        wigglePoints.push(randomizedLinePoint);
-    }
-    path.insertSegments(1, wigglePoints);
-    path.smooth({ type: 'continuous' });
-    addNewWiggle(path, timeCreated);
+  // randomize all in-between points on the wiggle
+  var numWiggleSections = (Math.random() + 0.5) * baseNumberWiggleSegments;
+  var wigglePoints = [];
+  for (var i = 1; i < numWiggleSections - 1; i++) {
+    var linePoint = path.getPointAt((i / numWiggleSections) * path.length)
+    var variation = (2 * (Math.random() - 0.5)) * (endWigglinessFactor * i);
+    var randomizedLinePoint = linePoint + { x: variation, y: variation };
+    wigglePoints.push(randomizedLinePoint);
+  }
+  path.insertSegments(1, wigglePoints);
+  path.smooth({ type: 'continuous' });
+  addNewWiggle(path, timeCreated);
 }
 
 // progressively fill or drop wiggles

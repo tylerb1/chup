@@ -1,9 +1,10 @@
-html, body, canvas {
- width: 100vh;
- height: 100vw;
+html,
+body {
+    height: 100%;
 }
 
-.container {
-  width: 100vh;
-  height: 100vw;
+/* Scale canvas with resize attribute to full size */
+canvas[resize] {
+    width: 100%;
+    height: 100%;
 }

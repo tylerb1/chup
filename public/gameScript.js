@@ -1,6 +1,6 @@
 // game variables + constants
-var outerPadding = 16;
-var innerCircleRadius = 20;
+var outerPadding = 8;
+var innerCircleRadius = 25;
 
 var wiggles = [];
 var nWiggles = 0;
@@ -16,8 +16,8 @@ var baseTimeBetweenSpawns = 0.5;
 var spawnFrequencyVariation = 0.5;
 var wiggleWidth = 3;
 
-var initialFallDelta = 0.4;
-var wiggleFallSpeed = 0.6;
+var initialFallDelta = 0.3;
+var wiggleFallSpeed = 0.4;
 var wiggleFallRotation = 10;
 
 var mouseTrails = [];

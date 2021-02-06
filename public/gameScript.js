@@ -287,11 +287,9 @@ function animateFallingWiggle(wiggle) {
     wiggle.fullPath.rotate(wiggleFallRotation, wiggle.fullPath.internalBounds.center);
   } else {
     // remove falling paths from scene if below scene
-    for (var i = 0; i < wiggles.length; i++) {
-      if (wiggles[i].isFalling) wiggles[i].fullPath.remove();
-    }
+    wiggle.fullPath.remove();
     wiggles = wiggles.filter(function(w) { 
-      return !w.isFalling 
+      return w.id !== wiggle.id
     });
   }
 }

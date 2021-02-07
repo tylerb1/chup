@@ -10,6 +10,7 @@ var timeToNextWiggle = (Math.random() * 2) + 1;
 var wigglesLetThrough = 0;
 
 var wiggleCurveTime = 3;
+var wiggleCurveSpeedupFactor = 2;
 var endWigglinessFactor = 10;
 var baseNumberWiggleSegments = 8;
 var baseTimeBetweenSpawns = 0.5;
@@ -26,6 +27,7 @@ var mouseTrailFadeTime = 2;
 
 var clearingCircle = null;
 var clearingCircleCurveTime = 0.6;
+var clearingCircleSpeedupFactor = 1;
 var clearingCircleRadius = innerCircleRadius + 25;
 var canClear = false;
 var isClearing = false;
@@ -50,6 +52,13 @@ outerCirclePath.strokeColor = 'black';
 // ANIMATE GAME
 
 function onFrame(event) {
+  // animate inner circle
+  for (var i = 0; i < innerCirclePath.segments.length; i++) {
+    var offset = innerCirclePath.getOffsetOf(innerCirclePath.segments[i].point);
+    var normalAtPoint = innerCirclePath.getNormalAt(offset);
+    innerCirclePath.segments[i].point = innerCirclePath.segments[i].point + normalAtPoint * 0.08 * Math.sin(event.time * 3 + i * 4);
+  }
+
   // spawn new wiggles
   if (event.time > timeToNextWiggle) {
     createWiggle(event.time);
@@ -77,7 +86,13 @@ function onFrame(event) {
   for (var i = 0; i < wiggles.length; i++) {
     var wiggle = wiggles[i];
     if (!wiggle.isFalling) {
-      animateGrowingWiggle(wiggle, event.time, i, 3, wiggleCurveTime);
+      animateGrowingWiggle(
+        wiggle, 
+        event.time, 
+        i, 
+        wiggleCurveSpeedupFactor, 
+        wiggleCurveTime
+      );
     } else {
       animateFallingWiggle(wiggle);
     }
@@ -89,7 +104,13 @@ function onFrame(event) {
       clearingCircle.timeCreated = event.time;
     }
     dropIntersectedWiggles(clearingCircle.currentPath);
-    animateGrowingWiggle(clearingCircle, event.time, -1, 1, clearingCircleCurveTime);
+    animateGrowingWiggle(
+      clearingCircle, 
+      event.time, 
+      -1, 
+      clearingCircleSpeedupFactor, 
+      clearingCircleCurveTime
+    );
   }
 }
 
@@ -155,9 +176,10 @@ function createWiggle(timeCreated) {
   var numWiggleSections = (Math.random() + 0.5) * baseNumberWiggleSegments;
   var wigglePoints = [];
   for (var i = 1; i < numWiggleSections - 1; i++) {
-    var linePoint = path.getPointAt((i / numWiggleSections) * path.length)
-    var variation = (2 * (Math.random() - 0.5)) * (endWigglinessFactor * i);
-    var randomizedLinePoint = linePoint + { x: variation, y: variation };
+    var offset = (i / numWiggleSections) * path.length;
+    var linePoint = path.getPointAt(offset);
+    var normalAtPoint = path.getNormalAt(offset) * i * endWigglinessFactor * (2 * (Math.random() - 0.5));
+    var randomizedLinePoint = linePoint + normalAtPoint;
     wigglePoints.push(randomizedLinePoint);
   }
   path.insertSegments(1, wigglePoints);

@@ -8,9 +8,10 @@ var wigglesChopped = 0;
 var progressToNextPowerUp = 0;
 var timeToNextWiggle = (Math.random() * 2) + 1;
 var wigglesLetThrough = 0;
+var wigglesCleared = 0;
 
 var wiggleCurveTime = 3;
-var wiggleCurveSpeedupFactor = 2;
+var wiggleCurveSpeedupFactor = 0.5;
 var endWigglinessFactor = 10;
 var baseNumberWiggleSegments = 8;
 var baseTimeBetweenSpawns = 0.5;
@@ -26,11 +27,11 @@ var mousePath;
 var mouseTrailFadeTime = 2;
 
 var clearingCircle = null;
-var clearingCircleCurveTime = 0.6;
-var clearingCircleSpeedupFactor = 1;
-var clearingCircleRadius = innerCircleRadius + 25;
+var clearingCircleCurveTime = 1;
+var clearingCircleSpeedupFactor = 0.5;
 var canClear = false;
-var isClearing = false;
+var clearingStage = '';
+var clearingCircleHead = null;
 
 // create inner circle
 var innerCirclePath = new Path.Circle(view.center, innerCircleRadius);
@@ -48,6 +49,24 @@ var outerCircleRadius = window.innerWidth > window.innerHeight
   : (window.innerWidth / 2) - outerPadding;
 var outerCirclePath = new Path.Circle(view.center, outerCircleRadius);
 outerCirclePath.strokeColor = 'black';
+outerCirclePath.strokeWidth = 4;
+var clearingCircleRadius = outerCircleRadius / 2;
+
+// show game info
+var clearedText = new PointText({
+	point: new Point(view.center.x - outerCircleRadius + 20, 20),
+	justification: 'center',
+	fontSize: 20,
+	fillColor: 'black',
+  content: '0'
+});
+var missedText = new PointText({
+	point: new Point(view.center.x + outerCircleRadius - 20, 20),
+	justification: 'center',
+	fontSize: 20,
+	fillColor: 'black',
+  content: '0'
+});
 
 // ANIMATE GAME
 
@@ -60,7 +79,7 @@ function onFrame(event) {
   }
 
   // spawn new wiggles
-  if (event.time > timeToNextWiggle) {
+  if (event.time > timeToNextWiggle && clearingStage === '') {
     createWiggle(event.time);
     timeToNextWiggle = event.time + ((Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns);
   }
@@ -68,8 +87,8 @@ function onFrame(event) {
   // show that clearing circle is available, if needed
   if (progressToNextPowerUp >= 5) {
     canClear = true;
-    innerCirclePath.strokeColor = 'blue';
-    innerCirclePath.fillColor = 'blue';
+    innerCirclePath.strokeColor = 'green';
+    innerCirclePath.fillColor = 'green';
   }
     
   // animate mouse trails
@@ -85,32 +104,38 @@ function onFrame(event) {
   // animate growing & falling wiggles
   for (var i = 0; i < wiggles.length; i++) {
     var wiggle = wiggles[i];
-    if (!wiggle.isFalling) {
-      animateGrowingWiggle(
-        wiggle, 
-        event.time, 
-        i, 
-        wiggleCurveSpeedupFactor, 
-        wiggleCurveTime
-      );
+    if (wiggle.type !== 'falling') {
+      if (clearingStage === '') {
+        wiggle.progress += event.delta;
+        animateGrowingWiggle(
+          wiggle,
+          wiggleCurveSpeedupFactor, 
+          wiggleCurveTime
+        );
+      }
     } else {
       animateFallingWiggle(wiggle);
     }
   }
 
   // animate clearing circle, if active
-  if (isClearing) {
-    if (!clearingCircle.timeCreated) {
-      clearingCircle.timeCreated = event.time;
-    }
+  if (clearingStage === 'clearing') {
     dropIntersectedWiggles(clearingCircle.currentPath);
+    clearingCircle.progress += event.delta;
     animateGrowingWiggle(
       clearingCircle, 
-      event.time, 
-      -1, 
       clearingCircleSpeedupFactor, 
       clearingCircleCurveTime
     );
+    clearingCircleHead.position = clearingCircle.currentPath.getPointAt(clearingCircle.currentPath.length);
+  } else if (clearingStage === 'end') {
+    innerCirclePath.strokeColor = 'black';
+    innerCirclePath.fillColor = 'black';
+    canClear = false;
+    clearingCircle = null;
+    clearingCircleHead.remove();
+    clearingCircleHead = null;
+    clearingStage = '';
   }
 }
 
@@ -165,11 +190,17 @@ function onMouseUp(event) {
 
 // GROWING WIGGLE FUNCTIONS
 
-function createWiggle(timeCreated) {
+function createWiggle() {
   // set start & end
   var circleOffset = Math.random();
   var startPoint = innerCirclePath.getPointAt(circleOffset * innerCirclePath.length);
   var endPoint = outerCirclePath.getPointAt(circleOffset * outerCirclePath.length);
+  // randomize direction of wiggle
+  if (Math.random() > 0.5) {
+    var startPlaceholder = startPoint;
+    startPoint = endPoint;
+    endPoint = startPlaceholder;
+  }
   var path = new Path.Line(startPoint, endPoint);
 
   // randomize all in-between points on the wiggle
@@ -184,56 +215,55 @@ function createWiggle(timeCreated) {
   }
   path.insertSegments(1, wigglePoints);
   path.smooth({ type: 'continuous' });
-  addNewWiggle(path, timeCreated);
+  addNewWiggle(path);
 }
 
-function addNewWiggle(wigglePath, timeCreated) {
+function addNewWiggle(wigglePath) {
   var wiggleData = {
     id: 'w' + nWiggles.toString(), 
     fullPath: wigglePath,
     currentPath: new Path(),
-    timeCreated: timeCreated,
-    isFalling: false
+    progress: 0,
+    type: 'growing'
   };
   wiggles.push(wiggleData);
   nWiggles += 1;
 }
 
-function animateGrowingWiggle(wiggle, time, i, speedUp, curveTime) {
+function animateGrowingWiggle(wiggle, speedUp, curveTime) {
   // remove wiggle if it reached outer circle
-  if (time - wiggle.timeCreated > curveTime) {
+  if (wiggle.progress >= curveTime) {
     wiggle.currentPath.remove();
     wiggle.fullPath.remove();
-    if (i > -1) {
+    if (wiggle.type == 'growing') {
+      var i = wiggles.findIndex(function (w) {
+        return wiggle.id == w.id;
+      });
       wiggles.splice(i, 1);
       wigglesLetThrough += 1;
+      missedText.content = wigglesLetThrough.toString();
     } else {
-      innerCirclePath.strokeColor = 'black';
-      innerCirclePath.fillColor = 'black';
-      canClear = false;
-      clearingCircle = null;
-      isClearing = false;
+      clearingStage = 'shrink';
+      var shrinkTween = clearingCircleHead.tweenTo(
+        { scaling: 1 },
+        500
+      );
+      shrinkTween.then(function() {
+        clearingStage = 'end';
+      });
     }
   } else {
     // otherwise, redraw wiggle further along path
     wiggle.currentPath.remove();
     var fullPath = wiggle.fullPath.clone();
-    var phase = (time - wiggle.timeCreated) % curveTime;
-    // wiggle speeds up as it gets closer to outer circle
-    var progress = (Math.pow(phase, speedUp) / Math.pow(curveTime, speedUp)) * fullPath.length;
+    var progress = (Math.pow(wiggle.progress, speedUp) / Math.pow(curveTime, speedUp)) * fullPath.length;
     var splitPath = fullPath.splitAt(progress);
     var pathToDraw = fullPath.subtract(splitPath, { trace: false });
-    if (i > -1) {
+    if (wiggle.type === 'growing') {
       pathToDraw.strokeColor = 'black';
-    } else {
-      pathToDraw.strokeColor = {
-        gradient: {
-          stops: ['white', 'blue']
-        },
-        origin: pathToDraw.firstSegment.point,
-        destination: pathToDraw.lastSegment.point
-      }
-    }
+     } else {
+      pathToDraw.strokeColor = 'green';
+     }
     pathToDraw.strokeWidth = wiggleWidth;
     wiggle.currentPath = pathToDraw;
     fullPath.remove();
@@ -246,7 +276,7 @@ function animateGrowingWiggle(wiggle, time, i, speedUp, curveTime) {
 function dropIntersectedWiggles(path) {
   var wiggleIntersectionOffsets = {};
   wiggles.forEach(function(wiggle) {
-    if (!wiggle.isFalling && !(wiggle.id in wiggleIntersectionOffsets)) {
+    if (wiggle.type !== 'falling' && !(wiggle.id in wiggleIntersectionOffsets)) {
       var ixns = wiggle.currentPath.getIntersections(path);
       if (ixns.length > 0) {
         var offset = wiggle.currentPath.getOffsetOf(ixns[0].point);
@@ -259,6 +289,8 @@ function dropIntersectedWiggles(path) {
   // drop any wiggles that were hit
   Object.keys(wiggleIntersectionOffsets).forEach(function(id) {
     dropWiggle(id, wiggleIntersectionOffsets[id]);
+    wigglesCleared += 1;
+    clearedText.content = wigglesCleared.toString();
   });
 }
 
@@ -282,19 +314,20 @@ function dropWiggle(id, offset) {
   // split wiggle that was hit at intersection point & create falling wiggles
   var fallingWiggle1 = wiggleHitPath.splitAt(offset);
   var fallingWiggle2 = wiggleHitPath.subtract(fallingWiggle1, { trace: false });
-  addFallingWiggle(fallingWiggle1, 'red');
-  addFallingWiggle(fallingWiggle2, 'blue');
+  addFallingWiggle(fallingWiggle1, 'red', 'left');
+  addFallingWiggle(fallingWiggle2, 'red', 'right');
 
   wiggleHitPath.remove();
 }
 
-function addFallingWiggle(wigglePath, strokeColor) {
+function addFallingWiggle(wigglePath, strokeColor, direction) {
   wigglePath.strokeColor = strokeColor;    
   var wiggleData = {
     id: 'w' + nWiggles.toString(), 
     fullPath: wigglePath,
     delta: initialFallDelta,
-    isFalling: true
+    type: 'falling',
+    fallingDirection: direction
   };
   wiggles.push(wiggleData);
   nWiggles += 1;
@@ -303,7 +336,7 @@ function addFallingWiggle(wigglePath, strokeColor) {
 function animateFallingWiggle(wiggle) {
   if (wiggle.fullPath.internalBounds.center.y < view.center.y * 2) {
     // animate falling paths if within scene
-    var multiplier = wiggle.fullPath.strokeColor == 'red' ? 1 : -1;
+    var multiplier = wiggle.fallingDirection == 'left' ? 1 : -1;
     wiggle.fullPath.translate(new Point(4 * multiplier, wiggle.delta));
     wiggle.delta += wiggleFallSpeed;
     wiggle.fullPath.rotate(wiggleFallRotation, wiggle.fullPath.internalBounds.center);
@@ -331,7 +364,22 @@ function clearAtCenter() {
   );
   clearingCircle = {
     fullPath: clearingCirclePath,
-    currentPath: new Path()
+    currentPath: new Path(),
+    progress: 0,
+    type: 'clearing'
   };
-  isClearing = true;
+  clearingStage = 'grow';
+  clearingCircleHead = new Path.Circle({
+    center: view.center + { x: 0, y: -1 * clearingCircleRadius },
+    radius: 2,
+    fillColor: 'green',
+    applyMatrix: false
+  });
+  var growTween = clearingCircleHead.tweenTo(
+    { scaling: 5 },
+    500
+  );
+  growTween.then(function() {
+    clearingStage = 'clearing';
+  });
 }

@@ -311,6 +311,9 @@ function dropWiggle(id, offset) {
   })
   wiggles.splice(indexToRemove, 1);
 
+  // animate intersection point
+  animateIntersection(wiggleHitPath.getPointAt(offset));
+
   // split wiggle that was hit at intersection point & create falling wiggles
   var fallingWiggle1 = wiggleHitPath.splitAt(offset);
   var fallingWiggle2 = wiggleHitPath.subtract(fallingWiggle1, { trace: false });
@@ -318,6 +321,29 @@ function dropWiggle(id, offset) {
   addFallingWiggle(fallingWiggle2, 'red', 'right');
 
   wiggleHitPath.remove();
+}
+
+function animateIntersection(point) {
+  var innerCircle = new Path.Circle(new Point(point), 8);
+  var outerCircle = new Path.Circle(new Point(point), 24);
+  var confetti = [];
+  for (var i = 0; i < 8; i++) {
+    var innerCirclePoint = innerCircle.getPointAt((i / 8) * innerCircle.length);
+    var outerCirclePoint = outerCircle.getPointAt((i / 8) * outerCircle.length);
+    var confet = new Path.Line(point, innerCirclePoint);
+    confet.strokeColor = 'orange';
+    confet.strokeWidth = 4;
+    confetti.push(confet);
+    confet.tweenTo(
+      { 'position.x': outerCirclePoint.x, 'position.y': outerCirclePoint.y },
+      500
+    );
+  }
+  setTimeout(function () {
+    confetti.forEach(function(c) {
+      c.remove();
+    });
+  }, 550);
 }
 
 function addFallingWiggle(wigglePath, strokeColor, direction) {

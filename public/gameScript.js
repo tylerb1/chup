@@ -287,12 +287,14 @@ function animateGrowingWiggle(wiggle, curveTime) {
   }
 }
 
+// easeInOutCubic from https://github.com/ai/easings.net/blob/master/src/easings/easingsFunctions.ts
 function getClearingCircleEasing(x) {
   return x < 0.5 
     ? 4 * x * x * x 
     : 1 - Math.pow(-2 * x + 2, 3) / 2;;
 }
 
+// easeOutInQuad from https://gist.github.com/gre/1650294#gistcomment-1569460
 function getWiggleEasing(t) {
   return t < 0.5 
     ? (2 * t) * (2 - 2 * t) * 0.5 

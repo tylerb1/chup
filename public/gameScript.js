@@ -1,44 +1,50 @@
-// game variables + constants
-var outerPadding = 8;
-var innerCircleRadius = 25;
-var innerCircleColor = '#AFD0BF';
-var outerCircleColor = '#000000';
-
+// game state variables
 var wiggles = [];
 var nWiggles = 0;
 var wigglesChopped = 0;
 var progressToNextPowerUp = 0;
-var timeToNextWiggle = (Math.random() * 2) + 1;
 var wigglesLetThrough = 0;
 var wigglesCleared = 0;
 
+// inner circle
+var innerCircleRadius = 25;
+var innerCircleColor = '#AFD0BF';
+
+// outer circle
+var outerPadding = 8;
+var outerCircleColor = '#000000';
+
+// wiggle params
+var wiggleWidth = 3;
 var wiggleCurveTime = 3;
-var wiggleCurveSpeedupFactor = 0.5;
 var endWigglinessFactor = 10;
 var baseNumberWiggleSegments = 8;
 var baseTimeBetweenSpawns = 0.5;
 var spawnFrequencyVariation = 0.5;
-var wiggleWidth = 3;
+var timeToNextWiggle = (Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns;
 
+// main wiggles
 var initialFallDelta = 0.5;
 var wiggleFallSpeed = 0.4;
 var wiggleFallRotation = 10;
 var clearingColor = '#5171A5';
 var wiggleFallColor = '#B33951';
 var confettiColor = '#F0A202';
+var confettiDuration = 400;
 
+// mouse trails
 var mouseTrails = [];
 var mousePath;
 var mouseTrailFadeTime = 2;
 var mouseTrailColor = clearingColor;
 
+// clearing circle
 var clearingCircle = null;
 var clearingCircleCurveTime = 1;
-var clearingCircleSpeedupFactor = 0.5;
 var canClear = false;
 var clearingStage = '';
 var clearingCircleHead = null;
-
+var clearingCircleAnimDuration = 500;
 
 // create inner circle
 var innerCirclePath = new Path.Circle(view.center, innerCircleRadius);
@@ -46,7 +52,7 @@ innerCirclePath.strokeColor = innerCircleColor;
 innerCirclePath.fillColor = innerCircleColor;
 innerCirclePath.onClick = function() {
   if (canClear) {
-    clearAtCenter()
+    clearAtCenter();
   }
 }
 
@@ -116,7 +122,6 @@ function onFrame(event) {
         wiggle.progress += event.delta;
         animateGrowingWiggle(
           wiggle,
-          wiggleCurveSpeedupFactor, 
           wiggleCurveTime
         );
       }
@@ -131,7 +136,6 @@ function onFrame(event) {
     clearingCircle.progress += event.delta;
     animateGrowingWiggle(
       clearingCircle, 
-      clearingCircleSpeedupFactor, 
       clearingCircleCurveTime
     );
     clearingCircleHead.position = clearingCircle.currentPath.getPointAt(clearingCircle.currentPath.length);
@@ -240,7 +244,7 @@ function addNewWiggle(wigglePath, direction) {
   nWiggles += 1;
 }
 
-function animateGrowingWiggle(wiggle, speedUp, curveTime) {
+function animateGrowingWiggle(wiggle, curveTime) {
   // remove wiggle if it reached outer circle
   if (wiggle.progress >= curveTime) {
     wiggle.currentPath.remove();
@@ -256,7 +260,7 @@ function animateGrowingWiggle(wiggle, speedUp, curveTime) {
       clearingStage = 'shrink';
       var shrinkTween = clearingCircleHead.tweenTo(
         { scaling: 1 },
-        500
+        { duration: clearingCircleAnimDuration, easing: 'easeOutQuint' }
       );
       shrinkTween.then(function() {
         clearingStage = 'end';
@@ -266,7 +270,9 @@ function animateGrowingWiggle(wiggle, speedUp, curveTime) {
     // otherwise, redraw wiggle further along path
     wiggle.currentPath.remove();
     var fullPath = wiggle.fullPath.clone();
-    var progress = (Math.pow(wiggle.progress, speedUp) / Math.pow(curveTime, speedUp)) * fullPath.length;
+    var progress = wiggle.type === 'clearing' 
+      ? getClearingCircleEasing(wiggle.progress / curveTime) * fullPath.length
+      : getWiggleEasing(wiggle.progress / curveTime) * fullPath.length; 
     var splitPath = fullPath.splitAt(progress);
     var pathToDraw = fullPath.subtract(splitPath, { trace: false });
     if (wiggle.type === 'growing') {
@@ -279,6 +285,18 @@ function animateGrowingWiggle(wiggle, speedUp, curveTime) {
     fullPath.remove();
     splitPath.remove();
   }
+}
+
+function getClearingCircleEasing(x) {
+  return x < 0.5 
+    ? 4 * x * x * x 
+    : 1 - Math.pow(-2 * x + 2, 3) / 2;;
+}
+
+function getWiggleEasing(t) {
+  return t < 0.5 
+    ? (2 * t) * (2 - 2 * t) * 0.5 
+    : Math.pow((2 * (t - 0.5)), 2) * 0.5 + 0.5 ;
 }
 
 function getTweenedColor(wiggle, pathToDraw, curveTime) {
@@ -370,7 +388,7 @@ function dropWiggle(id, offset) {
 
 function animateIntersection(point) {
   var innerCircle = new Path.Circle(new Point(point), 8);
-  var outerCircle = new Path.Circle(new Point(point), 24);
+  var outerCircle = new Path.Circle(new Point(point), 40);
   var confetti = [];
   for (var i = 0; i < 8; i++) {
     var innerCirclePoint = innerCircle.getPointAt((i / 8) * innerCircle.length);
@@ -381,14 +399,14 @@ function animateIntersection(point) {
     confetti.push(confet);
     confet.tweenTo(
       { 'position.x': outerCirclePoint.x, 'position.y': outerCirclePoint.y },
-      250
+      { duration: confettiDuration, easing: 'easeOutQuad' }
     );
   }
   setTimeout(function () {
     confetti.forEach(function(c) {
       c.remove();
     });
-  }, 300);
+  }, confettiDuration + 20);
 }
 
 function addFallingWiggle(wigglePath, strokeColor, direction) {
@@ -448,7 +466,7 @@ function clearAtCenter() {
   });
   var growTween = clearingCircleHead.tweenTo(
     { scaling: 5 },
-    500
+    { duration: clearingCircleAnimDuration, easing: 'easeOutQuint' }
   );
   growTween.then(function() {
     clearingStage = 'clearing';

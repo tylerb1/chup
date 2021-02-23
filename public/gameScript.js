@@ -27,8 +27,8 @@ var wiggleWidth = 3;
 var wiggleCurveTime = 6;
 var endWigglinessFactor = 10;
 var baseNumberWiggleSegments = 8;
-var baseTimeBetweenSpawns = 0.5;
-var spawnFrequencyVariation = 0.5;
+var baseTimeBetweenSpawns = 1.5;
+var spawnFrequencyVariation = 0.8;
 var timeToNextWiggle = (Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns;
 
 // main wiggles
@@ -74,20 +74,20 @@ outerCirclePath.strokeWidth = 4;
 var clearingCircleRadius = outerCircleRadius / 2;
 
 // show game info
-var clearedText = new PointText({
-	point: new Point(view.center.x - outerCircleRadius + 20, 20),
-	justification: 'center',
-	fontSize: 20,
-	fillColor: 'black',
-  content: '0'
-});
-var missedText = new PointText({
-	point: new Point(view.center.x + outerCircleRadius - 20, 20),
-	justification: 'center',
-	fontSize: 20,
-	fillColor: 'black',
-  content: '0'
-});
+// var clearedText = new PointText({
+// 	point: new Point(view.center.x - outerCircleRadius + 20, 20),
+// 	justification: 'center',
+// 	fontSize: 20,
+// 	fillColor: 'black',
+//   content: '0'
+// });
+// var missedText = new PointText({
+// 	point: new Point(view.center.x + outerCircleRadius - 20, 20),
+// 	justification: 'center',
+// 	fontSize: 20,
+// 	fillColor: 'black',
+//   content: '0'
+// });
 
 // ANIMATE GAME
 
@@ -100,6 +100,16 @@ function onFrame(event) {
     var offset = innerCirclePath.getOffsetOf(innerCirclePath.segments[i].point);
     var normalAtPoint = innerCirclePath.getNormalAt(offset);
     innerCirclePath.segments[i].point = innerCirclePath.segments[i].point + normalAtPoint * 0.08 * Math.sin(event.time * 3 + i * 4);
+  }
+
+  if (innerCircleWavePathBottom) {
+    innerCircleWavePathBottom.remove();
+  }
+  if (innerCircleWavePathTop) {
+    innerCircleWavePathTop.remove();
+  }
+  if (innerCircleWavePath) {
+    innerCircleWavePath.remove();
   }
 
   if (lastNWigglesCleared !== nWigglesCleared) {
@@ -160,7 +170,7 @@ function onFrame(event) {
     );
     clearingCircleHead.position = clearingCircle.currentPath.getPointAt(clearingCircle.currentPath.length);
   } else if (clearingStage === 'end') {
-    wiggleCurveTime = 0.8 * wiggleCurveTime;
+    wiggleCurveTime = 0.9 * wiggleCurveTime;
     canClear = false;
     clearingCircle = null;
     clearingCircleHead.remove();
@@ -292,7 +302,11 @@ function animateGrowingWiggle(wiggle) {
       });
       wiggles.splice(i, 1);
       wigglesLetThrough += 1;
-      missedText.content = wigglesLetThrough.toString();
+      progressToNextPowerUp -= (1.0 / nWigglesToNextPowerUp);
+      if (progressToNextPowerUp <= 0) {
+        progressToNextPowerUp = 0;
+      }
+      // missedText.content = wigglesLetThrough.toString();
     } else {
       clearingStage = 'shrink';
       clearingCircle.fullPath.remove();
@@ -401,20 +415,11 @@ function dropIntersectedWiggles(path) {
     dropWiggle(id, wiggleIntersectionOffsets[id]);
     lastNWigglesCleared = nWigglesCleared;
     nWigglesCleared += 1;
-    clearedText.content = nWigglesCleared.toString();
+    // clearedText.content = nWigglesCleared.toString();
   });
 }
 
 function moveInnerCircleWavePath() {
-  if (innerCircleWavePathBottom) {
-    innerCircleWavePathBottom.remove();
-  }
-  if (innerCircleWavePathTop) {
-    innerCircleWavePathTop.remove();
-  }
-  if (innerCircleWavePath) {
-    innerCircleWavePath.remove();
-  }
   var innerCircleEndpoints = getInnerCircleEndpoints();
   if (innerCircleEndpoints.length === 2) {
     innerCircleWavePathTop = new Path.Line(innerCircleEndpoints[0].point, innerCircleEndpoints[1].point);
@@ -541,7 +546,11 @@ function animateFallingWiggle(wiggle) {
 
 function clearAtCenter() {
   progressToNextPowerUp = 0;
-  nWigglesToNextPowerUp = Math.floor(Math.pow(nWigglesToNextPowerUp, 1.5));
+  nWigglesToNextPowerUp = Math.floor(Math.pow(nWigglesToNextPowerUp, 1.4));
+  spawnFrequencyVariation *= 0.95;
+  baseTimeBetweenSpawns *= 0.9;
+  console.log(spawnFrequencyVariation);
+  console.log(baseTimeBetweenSpawns);
   var clearingCirclePath = new Path.Arc(
     view.center + { x: 0, y: -1 * clearingCircleRadius },
     view.center + { x: clearingCircleRadius, y: 0 },

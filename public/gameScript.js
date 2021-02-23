@@ -3,12 +3,20 @@ var wiggles = [];
 var nWiggles = 0;
 var wigglesChopped = 0;
 var progressToNextPowerUp = 0;
+var nWigglesToNextPowerUp = 4;
 var wigglesLetThrough = 0;
-var wigglesCleared = 0;
+var nWigglesCleared = 0;
+var lastNWigglesCleared = 0;
 
 // inner circle
 var innerCircleRadius = 25;
 var innerCircleColor = '#AFD0BF';
+var nInnerCircleWaveSegments = 8;
+var innerCircleWaveHeight = 0;
+var innerCircleWavePath = null;
+var innerCircleWavePathTop = null;
+var innerCircleWavePathBottom = null;
+var waveLineY = 0;
 
 // outer circle
 var outerPadding = 8;
@@ -49,7 +57,6 @@ var clearingCircleAnimDuration = 500;
 // create inner circle
 var innerCirclePath = new Path.Circle(view.center, innerCircleRadius);
 innerCirclePath.strokeColor = innerCircleColor;
-innerCirclePath.fillColor = innerCircleColor;
 innerCirclePath.onClick = function() {
   if (canClear) {
     clearAtCenter();
@@ -91,6 +98,17 @@ function onFrame(event) {
     innerCirclePath.segments[i].point = innerCirclePath.segments[i].point + normalAtPoint * 0.08 * Math.sin(event.time * 3 + i * 4);
   }
 
+  if (lastNWigglesCleared !== nWigglesCleared) {
+    lastNWigglesCleared = nWigglesCleared;
+    moveInnerCircleWavePath(true);
+  }
+
+  // animate wavy progress indicator in inner circle
+  if (progressToNextPowerUp > 0 && progressToNextPowerUp < 1) {
+    moveInnerCircleWavePath(false);
+    animateInnerCircleWave(event);
+  }
+
   // spawn new wiggles
   if (event.time > timeToNextWiggle && clearingStage === '') {
     createWiggle(event.time);
@@ -98,7 +116,7 @@ function onFrame(event) {
   }
 
   // show that clearing circle is available, if needed
-  if (progressToNextPowerUp >= 5) {
+  if (progressToNextPowerUp >= 1) {
     canClear = true;
     innerCirclePath.strokeColor = clearingColor;
     innerCirclePath.fillColor = clearingColor;
@@ -140,14 +158,28 @@ function onFrame(event) {
     );
     clearingCircleHead.position = clearingCircle.currentPath.getPointAt(clearingCircle.currentPath.length);
   } else if (clearingStage === 'end') {
-    innerCirclePath.strokeColor = innerCircleColor;
-    innerCirclePath.fillColor = innerCircleColor;
     canClear = false;
     clearingCircle = null;
     clearingCircleHead.remove();
     clearingCircleHead = null;
     clearingStage = '';
   }
+}
+
+function animateInnerCircleWave(event) {
+  innerCircleWaveHeight = 6 * Math.pow(((innerCirclePath.bounds.height - Math.abs(view.center.y - waveLineY)) / innerCirclePath.bounds.height), 3);
+  for (var i = 1; i < nInnerCircleWaveSegments - 1; i++) {
+    var segment = innerCircleWavePathTop.segments[i];
+    var sinus = Math.sin(event.time * 3 + i);
+    segment.point.y = sinus * innerCircleWaveHeight + waveLineY;
+  }
+  innerCircleWavePathTop.smooth();
+  innerCircleWavePath = new CompoundPath({
+    children: [innerCircleWavePathBottom, innerCircleWavePathTop]
+  });
+  innerCircleWavePath.fillRule = 'evenodd';
+  innerCircleWavePath.fillColor = innerCircleColor;
+  innerCircleWavePath.strokeColor = innerCircleColor;
 }
 
 // MOUSE EVENTS
@@ -287,6 +319,9 @@ function animateGrowingWiggle(wiggle, curveTime) {
   }
 }
 
+// Reminder: ask about https://github.com/paperjs/paper.js/issues/1855
+// missing from paper.js docs
+
 // easeInOutCubic from https://github.com/ai/easings.net/blob/master/src/easings/easingsFunctions.ts
 function getClearingCircleEasing(x) {
   return x < 0.5 
@@ -298,7 +333,7 @@ function getClearingCircleEasing(x) {
 function getWiggleEasing(t) {
   return t < 0.5 
     ? (2 * t) * (2 - 2 * t) * 0.5 
-    : Math.pow((2 * (t - 0.5)), 2) * 0.5 + 0.5 ;
+    : Math.pow((2 * (t - 0.5)), 2) * 0.5 + 0.5;
 }
 
 function getTweenedColor(wiggle, pathToDraw, curveTime) {
@@ -354,9 +389,55 @@ function dropIntersectedWiggles(path) {
   // drop any wiggles that were hit
   Object.keys(wiggleIntersectionOffsets).forEach(function(id) {
     dropWiggle(id, wiggleIntersectionOffsets[id]);
-    wigglesCleared += 1;
-    clearedText.content = wigglesCleared.toString();
+    lastNWigglesCleared = nWigglesCleared;
+    nWigglesCleared += 1;
+    clearedText.content = nWigglesCleared.toString();
   });
+}
+
+function moveInnerCircleWavePath(print) {
+  if (innerCircleWavePathBottom) {
+    innerCircleWavePathBottom.remove();
+  }
+  if (innerCircleWavePathTop) {
+    innerCircleWavePathTop.remove();
+  }
+  if (innerCircleWavePath) {
+    innerCircleWavePath.remove();
+  }
+  var innerCircleEndpoints = getInnerCircleEndpoints(print);
+  if (innerCircleEndpoints.length === 2) {
+    innerCircleWavePathTop = new Path.Line(innerCircleEndpoints[0].point, innerCircleEndpoints[1].point);
+    for (var i = 0; i < nInnerCircleWaveSegments; i++) {
+      var newWavePointX = innerCircleEndpoints[1].point.x - (i / nInnerCircleWaveSegments) * innerCircleEndpoints[0].point.getDistance(innerCircleEndpoints[1].point);
+      innerCircleWavePathTop.insertSegment(1, new Point(newWavePointX, waveLineY));
+    }
+    var bottomPoint = innerCirclePath.getNearestPoint(new Point(innerCirclePath.bounds.center.x, innerCirclePath.bounds.bottom));
+    innerCircleWavePathBottom = new Path.Arc(
+      innerCircleEndpoints[0].point,
+      bottomPoint,
+      innerCircleEndpoints[1].point
+    );
+    innerCircleWavePath = new CompoundPath({
+      children: [
+        innerCircleWavePathTop,
+        innerCircleWavePathBottom
+      ]
+    });
+  }
+}
+
+function getInnerCircleEndpoints(print) {
+  waveLineY = innerCirclePath.bounds.bottom - progressToNextPowerUp * innerCirclePath.bounds.height;
+  var waveLine = new Path.Line(
+    new Point({ x: view.center.x - (innerCircleRadius + 50), y: waveLineY }), 
+    new Point({ x: view.center.x + (innerCircleRadius + 50), y: waveLineY })
+  );
+  var intersections = innerCirclePath.getIntersections(waveLine);
+  intersections.sort(function(i1, i2) {
+    return i1.point.x > i2.point.x ? 1 : -1;
+  });
+  return intersections;
 }
 
 function dropWiggle(id, offset) {
@@ -365,7 +446,10 @@ function dropWiggle(id, offset) {
   })
   if (!wiggleHit) return;
   wigglesChopped += 1;
-  progressToNextPowerUp += 1;
+  progressToNextPowerUp += (1.0 / nWigglesToNextPowerUp);
+  if (progressToNextPowerUp >= 1) {
+    progressToNextPowerUp = 1;
+  }
   var wiggleHitPath = wiggleHit.currentPath.clone();
     
   // remove hit wiggle from scene
@@ -444,6 +528,7 @@ function animateFallingWiggle(wiggle) {
 
 function clearAtCenter() {
   progressToNextPowerUp = 0;
+  nWigglesToNextPowerUp = Math.floor(Math.pow(nWigglesToNextPowerUp, 1.5));
   var clearingCirclePath = new Path.Arc(
     view.center + { x: 0, y: -1 * clearingCircleRadius },
     view.center + { x: clearingCircleRadius, y: 0 },
@@ -459,6 +544,8 @@ function clearAtCenter() {
     progress: 0,
     type: 'clearing'
   };
+  innerCirclePath.fillColor = null;
+  innerCirclePath.strokeColor = innerCircleColor;
   clearingStage = 'grow';
   clearingCircleHead = new Path.Circle({
     center: view.center + { x: 0, y: -1 * clearingCircleRadius },

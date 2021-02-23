@@ -97,11 +97,11 @@ function onFrame(event) {
   // console.log(project.activeLayer.children.length);
 
   // animate inner circle
-  for (var i = 0; i < innerCirclePath.segments.length; i++) {
-    var offset = innerCirclePath.getOffsetOf(innerCirclePath.segments[i].point);
-    var normalAtPoint = innerCirclePath.getNormalAt(offset);
-    innerCirclePath.segments[i].point = innerCirclePath.segments[i].point + normalAtPoint * 0.08 * Math.sin(event.time * 3 + i * 4);
-  }
+  // for (var i = 0; i < innerCirclePath.segments.length; i++) {
+  //   var offset = innerCirclePath.getOffsetOf(innerCirclePath.segments[i].point);
+  //   var normalAtPoint = innerCirclePath.getNormalAt(offset);
+  //   innerCirclePath.segments[i].point = innerCirclePath.segments[i].point + normalAtPoint * 0.08 * Math.sin(event.time * 3 + i * 4);
+  // }
 
   if (innerCircleWavePathBottom) {
     innerCircleWavePathBottom.remove();

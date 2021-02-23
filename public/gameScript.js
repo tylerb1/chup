@@ -92,7 +92,7 @@ var missedText = new PointText({
 // ANIMATE GAME
 
 function onFrame(event) {
-  // uncomment to check for excessive layer creation
+  // uncomment to check for excessive path creation
   // console.log(project.activeLayer.children.length);
 
   // animate inner circle
@@ -541,7 +541,7 @@ function animateFallingWiggle(wiggle) {
 
 function clearAtCenter() {
   progressToNextPowerUp = 0;
-  nWigglesToNextPowerUp = Math.floor(Math.pow(nWigglesToNextPowerUp, 1.2));
+  nWigglesToNextPowerUp = Math.floor(Math.pow(nWigglesToNextPowerUp, 1.5));
   var clearingCirclePath = new Path.Arc(
     view.center + { x: 0, y: -1 * clearingCircleRadius },
     view.center + { x: clearingCircleRadius, y: 0 },

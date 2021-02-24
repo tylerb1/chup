@@ -7,6 +7,7 @@ var nWigglesLetThrough = 0;
 var nWigglesCleared = 0;
 var lastNWigglesCleared = -1;
 var lastNWigglesLetThrough = -1;
+var level = 1;
 
 // inner circle
 var innerCircleColor = '#AFD0BF';
@@ -17,9 +18,10 @@ var innerCircleWavePathTop = null;
 var innerCircleWavePathBottom = null;
 var innerCircleStrokeWidth = 6;
 var waveLineY = 0;
+var isRewinding = false;
 
 // outer circle
-var outerPadding = 8;
+var outerPadding = 24;
 var outerCircleColor = '#000000';
 
 // wiggle params
@@ -54,7 +56,7 @@ var mousePathStrokeWidth = 3;
 // clearing circle params
 var clearingCircles = [];
 var clearingCircleHeads = [];
-var clearingCircleCurveTime = 1;
+var clearingCircleCurveTime = 1.5;
 var canClear = false;
 var isClearing = false;
 var clearingCircleAnimDuration = 500;
@@ -86,21 +88,15 @@ innerCirclePath.onClick = function() {
 var outerClearingCircleRadius = outerCircleRadius - 15;
 var innerClearingCircleRadius = innerCircleRadius + 15;
 
-// show game info
-// var clearedText = new PointText({
-// 	point: new Point(view.center.x - outerCircleRadius + 20, 20),
-// 	justification: 'center',
-// 	fontSize: 20,
-// 	fillColor: 'black',
-//   content: '0'
-// });
-// var missedText = new PointText({
-// 	point: new Point(view.center.x + outerCircleRadius - 20, 20),
-// 	justification: 'center',
-// 	fontSize: 20,
-// 	fillColor: 'black',
-//   content: '0'
-// });
+// show level
+var levelText = new PointText({
+	point: new Point(view.center.x, 15),
+	justification: 'center',
+	fontSize: 16,
+  fontWeight: 'bold',
+  fontFamily: 'Helvetica',
+  content: '1'
+});
 
 // ANIMATE GAME
 
@@ -110,16 +106,24 @@ function onFrame(event) {
   if (canClear) {
     animateInnerCircle(event.time);
   }
+  if (isRewinding) {
+    progressToNextPowerUp -= (event.delta / 2);
+    if (progressToNextPowerUp < 0) {
+      progressToNextPowerUp = 0;
+      isRewinding = false;
+    }
+  }
   if (
     lastNWigglesCleared !== nWigglesCleared ||
-    lastNWigglesLetThrough !== nWigglesLetThrough
+    lastNWigglesLetThrough !== nWigglesLetThrough ||
+    isRewinding
   ) {
     moveInnerCircleWavePath();
   }
   if (progressToNextPowerUp > 0 && progressToNextPowerUp < 1) {
     animateInnerCircleWave(event);
   }
-  if (event.time > timeToNextWiggle && !isClearing) {
+  if (event.time > timeToNextWiggle && !isClearing && !isRewinding) {
     createWiggle(event.time);
     timeToNextWiggle = event.time + ((Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns);
   }
@@ -160,7 +164,16 @@ function animateAllWiggles(delta) {
     var wiggle = wiggles[i];
     if (wiggle.type !== 'falling') {
       if (!isClearing) {
-        wiggle.progress += delta;
+        if (!isRewinding) {
+          wiggle.progress += delta;
+        } else {
+          if (wiggle.type === 'growing') {
+            wiggle.progress -= delta;
+            if (wiggle.progress < 0.01) {
+              wiggle.progress = 0.01;
+            }
+          }
+        }
         animateGrowingWiggle(
           wiggle
         );
@@ -214,6 +227,8 @@ function finishClearing() {
   }
 
   isClearing = false;
+  level += 1;
+  levelText.content = level.toString();
 }
 
 function animateInnerCircleWave(event) {
@@ -235,9 +250,17 @@ function animateInnerCircleWave(event) {
 
 // MOUSE EVENTS
 
-function onMouseDown() {
+function onMouseDown(event) {
   mousePath = new Path();
   mousePath.strokeColor = '#000000';
+
+  if (
+    innerCirclePath.contains(event.point) && 
+    progressToNextPowerUp > 0 &&
+    !canClear) 
+  {
+    isRewinding = true;
+  }
 }
 
 function onMouseDrag(event) {
@@ -273,6 +296,8 @@ function onMouseDrag(event) {
 }
 
 function onMouseUp(event) {
+  isRewinding = false;
+
   // add mouse trail to global array so it can be animated
   var mousePathClone = mousePath.clone();
   var mouseTrail = {
@@ -332,7 +357,6 @@ function addNewWiggle(wigglePath, direction) {
 function animateGrowingWiggle(wiggle) {
   // remove wiggle if it reached outer circle
   if (wiggle.progress >= wiggle.curveTime) {
-    wiggle.fullPath.remove();
     if (wiggle.type == 'growing') {
       handleWiggleLetThrough(wiggle);
     } else {
@@ -361,7 +385,7 @@ function handleWiggleLetThrough(wiggle) {
   }
   animateIntersection(wiggle.currentPath.getPointAt(wiggle.currentPath.length), false);
   wiggle.currentPath.remove();
-  // missedText.content = nWigglesLetThrough.toString();
+  wiggle.fullPath.remove();
 }
 
 function finishClearingCircle(wiggle) {
@@ -543,7 +567,7 @@ function dropWiggle(id, offset) {
   })
   if (!wiggleHit) return;
   progressToNextPowerUp += (1.0 / nWigglesToNextPowerUp);
-  if (progressToNextPowerUp >= 0.999) {
+  if (progressToNextPowerUp >= 0.999 /* fixes some rounding issues */) {
     progressToNextPowerUp = 1;
   }
   var wiggleHitPath = wiggleHit.currentPath.clone();
@@ -637,7 +661,7 @@ function initiateClearingCircle(isInner) {
   var clearingCircle = {
     fullPath: clearingCirclePath,
     currentPath: new Path(),
-    progress: 0,
+    progress: 0.02,
     type: 'clearing',
     curveTime: clearingCircleCurveTime,
     isInner: isInner,
@@ -663,6 +687,7 @@ function initiateClearingCircle(isInner) {
     var cc = clearingCircles.find(function(c) {
       return c.isInner === isInner;
     });
+    console.log(cc);
     cc.stage = 'clearing';
   });
   isClearing = true;

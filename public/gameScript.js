@@ -106,6 +106,7 @@ var innerClearingCircleRadius = innerCircleRadius + 15;
 
 function onFrame(event) {
   canClear = progressToNextPowerUp >= 1;
+  innerCirclePath.bringToFront();
   if (canClear) {
     animateInnerCircle(event.time);
   }
@@ -400,7 +401,6 @@ function redrawWiggleAlongPath(wiggle) {
   }
   pathToDraw.strokeWidth = wiggleWidth;
   pathToDraw.strokeCap = 'round';
-  pathToDraw.sendToBack();
   wiggle.currentPath = pathToDraw;
   fullPath.remove();
   splitPath.remove();
@@ -458,9 +458,9 @@ function getTweenedColorComponent(colorComponent, startColor, endColor, progress
   } else {
     diff = endColorNumber - startColorNumber;
   }
-  var finalColorNumber = Math.floor(startColorNumber + progress * diff);
+  var finalColorNumber = startColorNumber + Math.floor(progress * diff);
   var secondHexNumber = finalColorNumber % 16;
-  var firstHexNumber = Math.floor((finalColorNumber - secondHexNumber) / 16);
+  var firstHexNumber = (finalColorNumber - secondHexNumber) / 16;
   var hexString = firstHexNumber.toString(16) + secondHexNumber.toString(16);
   return hexString;
 }
@@ -506,7 +506,7 @@ function moveInnerCircleWavePath() {
       var newWavePointX = innerCircleEndpoints[1].x - (i / nInnerCircleWaveSegments) * innerCircleEndpoints[0].getDistance(innerCircleEndpoints[1]);
       innerCircleWavePathTop.insertSegment(1, { x: newWavePointX, y: waveLineY });
     }
-    var bottomPoint = innerCirclePath.getNearestPoint({ x: innerCirclePath.bounds.center.x, y: innerCirclePath.bounds.bottom });
+    var bottomPoint = { x: innerCirclePath.bounds.center.x, y: innerCirclePath.bounds.bottom };
     innerCircleWavePathBottom = new Path.Arc(
       innerCircleEndpoints[0],
       bottomPoint,

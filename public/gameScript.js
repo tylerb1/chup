@@ -9,7 +9,6 @@ var lastNWigglesCleared = -1;
 var lastNWigglesLetThrough = -1;
 
 // inner circle
-var innerCircleRadius = 40;
 var innerCircleColor = '#AFD0BF';
 var nInnerCircleWaveSegments = 4;
 var innerCircleWaveHeight = 0;
@@ -57,16 +56,6 @@ var clearingStage = '';
 var clearingCircleHead = null;
 var clearingCircleAnimDuration = 500;
 
-// create inner circle
-var innerCirclePath = new Path.Circle(view.center, innerCircleRadius);
-innerCirclePath.strokeColor = innerCircleColor;
-innerCirclePath.strokeWidth = 3;
-innerCirclePath.onClick = function() {
-  if (canClear) {
-    clearAtCenter();
-  }
-}
-
 // create outer circle
 var outerCircleRadius = window.innerWidth > window.innerHeight 
   ? (window.innerHeight / 2) - outerPadding 
@@ -75,6 +64,17 @@ var outerCirclePath = new Path.Circle(view.center, outerCircleRadius);
 outerCirclePath.strokeColor = outerCircleColor;
 outerCirclePath.strokeWidth = 4;
 var clearingCircleRadius = outerCircleRadius / 2;
+
+// create inner circle
+var innerCircleRadius = Math.ceil(outerCircleRadius / 6);
+var innerCirclePath = new Path.Circle(view.center, innerCircleRadius);
+innerCirclePath.strokeColor = innerCircleColor;
+innerCirclePath.strokeWidth = 3;
+innerCirclePath.onClick = function() {
+  if (canClear) {
+    clearAtCenter();
+  }
+}
 
 // show game info
 // var clearedText = new PointText({
@@ -100,8 +100,10 @@ function onFrame(event) {
   if (canClear) {
     animateInnerCircleEdge(event.time);
   }
-  if (lastNWigglesCleared !== nWigglesCleared ||
-      lastNWigglesLetThrough !== nWigglesLetThrough) {
+  if (
+    lastNWigglesCleared !== nWigglesCleared ||
+    lastNWigglesLetThrough !== nWigglesLetThrough
+  ) {
     moveInnerCircleWavePath();
   }
   if (progressToNextPowerUp > 0 && progressToNextPowerUp < 1) {
@@ -520,7 +522,6 @@ function dropWiggle(id, offset) {
     progressToNextPowerUp = 1;
   }
   var wiggleHitPath = wiggleHit.currentPath.clone();
-    
   // remove hit wiggle from scene
   wiggleHit.fullPath.remove();
   wiggleHit.currentPath.remove();
@@ -528,18 +529,14 @@ function dropWiggle(id, offset) {
     return w.id == wiggleHit.id 
   })
   wiggles.splice(indexToRemove, 1);
-
   // animate intersection point
   animateIntersection(wiggleHitPath.getPointAt(offset), true);
-
   // split wiggle that was hit at intersection point & create falling wiggles
   var fallingWiggle1 = wiggleHitPath.splitAt(offset);
   var fallingWiggle2 = wiggleHitPath.subtract(fallingWiggle1, { trace: false });
   addFallingWiggle(fallingWiggle1, wiggleFallColor, 'left');
   addFallingWiggle(fallingWiggle2, wiggleFallColor, 'right');
-
   wiggleHitPath.remove();
-
   nWigglesCleared += 1;
   // clearedText.content = nWigglesCleared.toString();
 }

@@ -687,7 +687,6 @@ function initiateClearingCircle(isInner) {
     var cc = clearingCircles.find(function(c) {
       return c.isInner === isInner;
     });
-    console.log(cc);
     cc.stage = 'clearing';
   });
   isClearing = true;

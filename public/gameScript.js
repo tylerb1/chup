@@ -22,8 +22,8 @@ var outerPadding = 8;
 var outerCircleColor = '#000000';
 
 // wiggle params
-var wiggleWidth = 4;
-var wiggleCurveTime = 6;
+var wiggleWidth = 6;
+var wiggleCurveTime = 4;
 var endWigglinessFactor = 10;
 var baseNumberWiggleSegments = 8;
 
@@ -41,20 +41,23 @@ var wiggleFallColor = '#B33951';
 var goodConfettiColor = '#F0A202';
 var badConfettiColor = '#B33951';
 var confettiDuration = 400;
+var confettiStrokeWidth = 2;
 
 // mouse trails
 var mouseTrails = [];
 var mousePath;
 var mouseTrailFadeTime = 2;
 var mouseTrailColor = clearingColor;
+var mousePathStrokeWidth = 3;
 
 // clearing circle params
-var clearingCircle = null;
+var clearingCircles = [];
+var clearingCircleHeads = [];
 var clearingCircleCurveTime = 1;
 var canClear = false;
-var clearingStage = '';
-var clearingCircleHead = null;
-var clearingCircleAnimDuration = 500;
+var isClearing = false;
+var clearingCircleAnimDuration = 400;
+var clearingCircleOffsetTime = 250;
 
 // create outer circle
 var outerCircleRadius = window.innerWidth > window.innerHeight 
@@ -62,8 +65,7 @@ var outerCircleRadius = window.innerWidth > window.innerHeight
   : (window.innerWidth / 2) - outerPadding;
 var outerCirclePath = new Path.Circle(view.center, outerCircleRadius);
 outerCirclePath.strokeColor = outerCircleColor;
-outerCirclePath.strokeWidth = 4;
-var clearingCircleRadius = outerCircleRadius / 2;
+outerCirclePath.strokeWidth = 6;
 
 // create inner circle
 var innerCircleRadius = Math.ceil(outerCircleRadius / 6);
@@ -72,9 +74,16 @@ innerCirclePath.strokeColor = innerCircleColor;
 innerCirclePath.strokeWidth = 3;
 innerCirclePath.onClick = function() {
   if (canClear) {
-    clearAtCenter();
+    initiateClearingCircle(true);
+    setTimeout(function() {
+      initiateClearingCircle(false) 
+    }, clearingCircleOffsetTime);
   }
 }
+
+// set clearing circle radii
+var outerClearingCircleRadius = outerCircleRadius - 15;
+var innerClearingCircleRadius = innerCircleRadius + 15;
 
 // show game info
 // var clearedText = new PointText({
@@ -95,8 +104,6 @@ innerCirclePath.onClick = function() {
 // ANIMATE GAME
 
 function onFrame(event) {
-  // uncomment to check for excessive path creation
-  // console.log(project.activeLayer.children.length);
   if (canClear) {
     animateInnerCircleEdge(event.time);
   }
@@ -109,14 +116,16 @@ function onFrame(event) {
   if (progressToNextPowerUp > 0 && progressToNextPowerUp < 1) {
     animateInnerCircleWave(event);
   }
-  if (event.time > timeToNextWiggle && clearingStage === '') {
+  if (event.time > timeToNextWiggle && !isClearing) {
     createWiggle(event.time);
     timeToNextWiggle = event.time + ((Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns);
   }
   setClearingAvailability();
   animateMouseTrails(event.time);
   animateAllWiggles(event.delta);
-  animateClearingCircle(event.delta);
+  animateClearingCircles(event.delta);
+  // uncomment to check for excessive path creation
+  // console.log(project.activeLayer.children.length);
 }
 
 function animateInnerCircleEdge(time) {
@@ -154,7 +163,7 @@ function animateAllWiggles(delta) {
   for (var i = 0; i < wiggles.length; i++) {
     var wiggle = wiggles[i];
     if (wiggle.type !== 'falling') {
-      if (clearingStage === '') {
+      if (!isClearing) {
         wiggle.progress += delta;
         animateGrowingWiggle(
           wiggle
@@ -166,16 +175,18 @@ function animateAllWiggles(delta) {
   }
 }
 
-function animateClearingCircle(delta) {
-  if (clearingStage === 'clearing') {
-    dropIntersectedWiggles(clearingCircle.currentPath);
-    clearingCircle.progress += delta;
-    animateGrowingWiggle(
-      clearingCircle
-    );
-    clearingCircleHead.position = clearingCircle.currentPath.getPointAt(clearingCircle.currentPath.length);
-  } else if (clearingStage === 'end') {
-    finishClearing();
+function animateClearingCircles(delta) {
+  for (var i = 0; i < clearingCircles.length; i++) {
+    if (clearingCircles[i].stage === 'clearing') {
+      dropIntersectedWiggles(clearingCircles[i].currentPath);
+      clearingCircles[i].progress += delta;
+      animateGrowingWiggle(
+        clearingCircles[i]
+      );
+      clearingCircleHeads[i].path.position = clearingCircles[i].currentPath.getPointAt(clearingCircles[i].currentPath.length);
+    } else if (clearingCircles[i].stage === 'end' && !(clearingCircles[i].isInner)) {
+      finishClearing();
+    }
   }
 }
 
@@ -187,9 +198,11 @@ function finishClearing() {
   baseTimeBetweenSpawns *= 0.8;
 
   canClear = false;
-  clearingCircle = null;
-  clearingCircleHead.remove();
-  clearingCircleHead = null;
+  for (var i = 0; i < 2; i++) {
+    clearingCircleHeads[i].path.remove();
+  }
+  clearingCircles = [];
+  clearingCircleHeads = [];
 
   innerCirclePath.remove();
   innerCirclePath = new Path.Circle(view.center, innerCircleRadius);
@@ -198,11 +211,14 @@ function finishClearing() {
   innerCirclePath.strokeWidth = 3;
   innerCirclePath.onClick = function() {
     if (canClear) {
-      clearAtCenter();
+      initiateClearingCircle(true);
+      setTimeout(function () { 
+        initiateClearingCircle(false) 
+      }, clearingCircleOffsetTime);
     }
   }
 
-  clearingStage = '';
+  isClearing = false;
 }
 
 function animateInnerCircleWave(event) {
@@ -246,7 +262,7 @@ function onMouseDrag(event) {
     origin: mousePath.firstSegment.point,
     destination: mousePath.lastSegment.point
   }
-  mousePath.strokeWidth = 4;
+  mousePath.strokeWidth = mousePathStrokeWidth;
 
   // 1. get most recent segment of mouse movement
   // 2. check each wiggle to see if latest mouse movement hit it
@@ -359,15 +375,21 @@ function handleWiggleLetThrough(wiggle) {
 
 function finishClearingCircle(wiggle) {
   wiggle.currentPath.remove();
-  clearingStage = 'shrink';
-  clearingCircle.fullPath.remove();
-  clearingCircle.currentPath.remove();
-  var shrinkTween = clearingCircleHead.tweenTo(
+  wiggle.fullPath.remove();
+  var isInner = wiggle.isInner;
+  var clearingCircleHead = clearingCircleHeads.find(function(c) {
+    return c.isInner === isInner;
+  });
+  var shrinkTween = clearingCircleHead.path.tweenTo(
     { scaling: 1 },
     { duration: clearingCircleAnimDuration, easing: 'easeOutQuint' }
   );
+  wiggle.stage = 'shrink';
   shrinkTween.then(function() {
-    clearingStage = 'end';
+    var cc = clearingCircles.find(function(c) {
+      return c.isInner === isInner;
+    });
+    cc.stage = 'end';
   });
 }
 
@@ -551,7 +573,7 @@ function animateIntersection(point, isGood) {
     var outerCirclePoint = outerCircle.getPointAt((i / nConfets) * outerCircle.length);
     var confet = new Path.Line(point, innerCirclePoint);
     confet.strokeColor = isGood ? goodConfettiColor : badConfettiColor;
-    confet.strokeWidth = 2;
+    confet.strokeWidth = confettiStrokeWidth;
     confetti.push(confet);
     confet.tweenTo(
       { 'position.x': outerCirclePoint.x, 'position.y': outerCirclePoint.y },
@@ -598,35 +620,47 @@ function animateFallingWiggle(wiggle) {
 
 // POWERUPS
 
-function clearAtCenter() {
+function initiateClearingCircle(isInner) {
+  var radius = isInner ? innerClearingCircleRadius : outerClearingCircleRadius;
   var clearingCirclePath = new Path.Arc(
-    view.center + { x: 0, y: -1 * clearingCircleRadius },
-    view.center + { x: clearingCircleRadius, y: 0 },
-    view.center + { x: 0, y: clearingCircleRadius }
+    view.center + { x: 0, y: -1 * radius },
+    view.center + { x: radius, y: 0 },
+    view.center + { x: 0, y: radius }
   );
   clearingCirclePath.arcTo(
-    view.center + { x: -1 * clearingCircleRadius, y: 0},
-    view.center + { x: 0, y: -1 * clearingCircleRadius}
+    view.center + { x: -1 * radius, y: 0},
+    view.center + { x: 0, y: -1 * radius}
   );
-  clearingCircle = {
+  var clearingCircle = {
     fullPath: clearingCirclePath,
     currentPath: new Path(),
     progress: 0,
     type: 'clearing',
-    curveTime: clearingCircleCurveTime
+    curveTime: clearingCircleCurveTime,
+    isInner: isInner,
+    stage: 'grow'
   };
-  clearingStage = 'grow';
-  clearingCircleHead = new Path.Circle({
-    center: view.center + { x: 0, y: -1 * clearingCircleRadius },
+  var clearingCircleHeadPath = new Path.Circle({
+    center: view.center + { x: 0, y: -1 * radius },
     radius: 2,
     fillColor: clearingColor,
-    applyMatrix: false
+    applyMatrix: false,
   });
-  var growTween = clearingCircleHead.tweenTo(
-    { scaling: 7 },
+  var clearingCircleHead = {
+    path: clearingCircleHeadPath,
+    isInner: isInner
+  };
+  var growTween = clearingCircleHeadPath.tweenTo(
+    { scaling: 5 },
     { duration: clearingCircleAnimDuration, easing: 'easeOutQuint' }
   );
+  clearingCircles.push(clearingCircle);
+  clearingCircleHeads.push(clearingCircleHead);
   growTween.then(function() {
-    clearingStage = 'clearing';
+    var cc = clearingCircles.find(function(c) {
+      return c.isInner === isInner;
+    });
+    cc.stage = 'clearing';
   });
+  isClearing = true;
 }

@@ -10,7 +10,7 @@ var lastNWigglesLetThrough = -1;
 
 // inner circle
 var innerCircleColor = '#AFD0BF';
-var nInnerCircleWaveSegments = 4;
+var nInnerCircleWaveSegments = 5;
 var innerCircleWaveHeight = 0;
 var innerCircleWavePath = null;
 var innerCircleWavePathTop = null;
@@ -71,12 +71,12 @@ outerCirclePath.strokeWidth = 6;
 var innerCircleRadius = Math.ceil(outerCircleRadius / 6);
 var innerCirclePath = new Path.Circle(view.center, innerCircleRadius);
 innerCirclePath.strokeColor = innerCircleColor;
-innerCirclePath.strokeWidth = 3;
+innerCirclePath.strokeWidth = 6;
 innerCirclePath.onClick = function() {
   if (canClear) {
-    initiateClearingCircle(true);
+    initiateClearingCircle(false);
     setTimeout(function() {
-      initiateClearingCircle(false) 
+      initiateClearingCircle(true) 
     }, clearingCircleOffsetTime);
   }
 }
@@ -211,9 +211,9 @@ function finishClearing() {
   innerCirclePath.strokeWidth = 3;
   innerCirclePath.onClick = function() {
     if (canClear) {
-      initiateClearingCircle(true);
+      initiateClearingCircle(false);
       setTimeout(function () { 
-        initiateClearingCircle(false) 
+        initiateClearingCircle(true) 
       }, clearingCircleOffsetTime);
     }
   }

@@ -27,17 +27,17 @@ var outerCircleColor = '#000000';
 
 // wiggle params
 var wiggleStrokeWidth = 4;
-var wiggleCurveTime = 4;
+var wiggleCurveTime = 6;
 var endWigglinessFactor = 4;
 var baseNumberWiggleSegments = 8;
 var wiggleRewindingMultiplier = 3;
 
 // wiggle spawning params
 var baseTimeBetweenSpawns = 0.8;
-var spawnFrequencyVariation = 0.8;
-var spawnFrequencyVariationMultiplier = 0.95;
-var spawnFrequencyBaseMultiplier = 0.75;
-var wiggleCurveTimeMultiplier = 0.9;
+var spawnFrequencyVariation = 0.75;
+var spawnFrequencyVariationMultiplier = 0.9;
+var spawnFrequencyBaseMultiplier = 0.7;
+var wiggleCurveTimeMultiplier = 0.96;
 var timeToNextWiggle = (Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns;
 
 // intersection params

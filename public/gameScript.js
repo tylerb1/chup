@@ -8,6 +8,7 @@ var nWigglesCleared = 0;
 var lastNWigglesCleared = -1;
 var lastNWigglesLetThrough = -1;
 var level = 1;
+var levelColorAnimDuration = 500;
 
 // inner circle
 var innerCircleColor = '#AFD0BF';
@@ -43,7 +44,7 @@ var timeToNextWiggle = (Math.random() * spawnFrequencyVariation) + baseTimeBetwe
 var initialFallVelocity = 10;
 var wiggleFallRotation = 12;
 var clearingColor = '#5171A5';
-var wiggleFallColor = '#B33951';
+var wiggleFallColor = '#F0A202';
 var goodConfettiColor = '#F0A202';
 var badConfettiColor = '#B33951';
 var confettiDuration = 300;
@@ -96,9 +97,10 @@ var levelText = new PointText({
 	point: new Point(view.center.x, 15),
 	justification: 'center',
 	fontSize: 16,
-  fontWeight: 'bold',
+  fontWeight: 400,
   fontFamily: 'Helvetica',
-  content: '1'
+  strokeColor: '#000000',
+  content: 'Level 1'
 });
 
 // ANIMATE GAME
@@ -235,8 +237,17 @@ function finishClearing() {
 
   isClearing = false;
   level += 1;
-  animateIntersection(new Point(view.center.x, 15), true);
-  levelText.content = level.toString();
+  var tweenIntoColor = levelText.tweenTo(
+    { strokeColor: innerCircleColor },
+    { duration: levelColorAnimDuration, easing: 'easeOutQuint' }
+  );
+  tweenIntoColor.then(function() {
+    levelText.tweenTo(
+      { strokeColor: '#000000' },
+      { duration: levelColorAnimDuration, easing: 'easeInQuint' }
+    );
+  });
+  levelText.content = 'Level ' + level.toString();
 }
 
 function animateInnerCircleWave(event) {
@@ -538,7 +549,7 @@ function moveInnerCircleWavePath() {
       var newWavePointX = innerCircleEndpoints[1].x - (i / nInnerCircleWaveSegments) * innerCircleEndpoints[0].getDistance(innerCircleEndpoints[1]);
       innerCircleWavePathTop.insertSegment(1, new Point({ x: newWavePointX, y: waveLineY }));
     }
-    var bottomPoint = new Point({ x: innerCirclePath.bounds.center.x, y: innerCirclePath.bounds.bottom });
+    var bottomPoint = new Point({ x: view.center.x, y: view.center.y + innerCircleRadius });
     innerCircleWavePathBottom = new Path.Arc(
       innerCircleEndpoints[0],
       bottomPoint,

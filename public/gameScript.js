@@ -94,7 +94,7 @@ var innerClearingCircleRadius = innerCircleRadius + 15;
 
 // show level
 var levelText = new PointText({
-	point: new Point(view.center.x, 15),
+	point: new Point(view.center.x, view.center.y - outerCircleRadius - 8),
 	justification: 'center',
 	fontSize: 16,
   fontWeight: 400,

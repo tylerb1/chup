@@ -195,7 +195,9 @@ function animateAllWiggles(delta, time) {
 function animateClearingCircles(delta, time) {
   for (var i = 0; i < clearingCircles.length; i++) {
     if (clearingCircles[i].stage === 'clearing') {
-      dropIntersectedWiggles(clearingCircles[i].currentPath, time);
+      // TODO: figure out why increasing time on these 
+      // falling wiggles and not normal ones is necessary
+      dropIntersectedWiggles(clearingCircles[i].currentPath, time + 0.3);
       clearingCircles[i].progress += delta;
       animateGrowingWiggle(
         clearingCircles[i]

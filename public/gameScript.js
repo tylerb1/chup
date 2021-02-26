@@ -1,11 +1,7 @@
 // game state variables
-var wiggles = []; // types: 'growing', 'falling', 'blast' (clearing & confetti handled separately)
-var blasts = [];
-var initialBlastRadius = 3;
-var blastStrokeWidth = 4;
-var maxBlastRadius = 30;
-var blastTime = 1.5;
-var nExtraBlastSegments = 4;
+var wiggles = []; 
+// wiggle types: 'growing', 'falling' 
+// (clearing, blasts, & confetti handled separately)
 var mouseDownLocation = null;
 var mouseUpLocation = null;
 var nWiggles = 0;
@@ -48,6 +44,14 @@ var spawnFrequencyBaseMultiplier = 0.7;
 var wiggleCurveTimeMultiplier = 0.96;
 var timeToNextWiggle = (Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns;
 
+// blast params
+var blasts = [];
+var initialBlastRadius = 3;
+var blastStrokeWidth = 4;
+var maxBlastRadius = 30;
+var blastTime = 1.5;
+var nExtraBlastSegments = 4;
+
 // intersection params
 var initialFallVelocity = 10;
 var wiggleFallRotation = 12;
@@ -57,13 +61,6 @@ var goodConfettiColor = '#F0A202';
 var badConfettiColor = '#B33951';
 var confettiDuration = 300;
 var confettiStrokeWidth = 3;
-
-// mouse trails
-// var mouseTrails = [];
-// var mousePath;
-// var mouseTrailFadeTime = 2;
-// var mouseTrailColor = clearingColor;
-// var mousePathStrokeWidth = 3;
 
 // clearing circle params
 var clearingCircles = [];
@@ -108,17 +105,24 @@ var levelText = new PointText({
 // ANIMATE GAME
 
 function onFrame(event) {
+  // allow or prevent clearing
   canClear = progressToNextPowerUp >= 1 && !isClearing;
 
+  // animate inner circle edge
   if (progressToNextPowerUp >= 1) {
     animateInnerCircle(event.time);
-  } else if (isRewinding) {
+  }
+
+  // update inner circle wave progress
+  if (isRewinding) {
     progressToNextPowerUp -= (event.delta / 2);
     if (progressToNextPowerUp < 0) {
       progressToNextPowerUp = 0;
       isRewinding = false;
     }
   }
+
+  // move inner circle wave up or down
   if (
     lastNWigglesCleared !== nWigglesCleared ||
     lastNWigglesLetThrough !== nWigglesLetThrough ||
@@ -126,27 +130,25 @@ function onFrame(event) {
   ) {
     moveInnerCircleWavePath();
   }
+
+  // animate wave in inner circle
   if (progressToNextPowerUp > 0 && progressToNextPowerUp < 1) {
     animateInnerCircleWave(event);
   }
+
+  // spawn new wiggles
   if (event.time > timeToNextWiggle && !isClearing && !isRewinding) {
     createGrowingWiggle(event.time);
     timeToNextWiggle = event.time + ((Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns);
   }
-  // animateMouseTrails(event.time);
+
+  // animate existing game items
   animateBlasts(event.delta, event.time);
   animateClearingCircles(event.delta);
   animateAllWiggles(event.delta);
-  // uncomment to check for excessive path creation
+  
+  // uncomment this to check for excessive path creation
   // console.log(project.activeLayer.children.length);
-}
-
-function removeBlast(blast) {
-  blast.currentPath.remove();
-  var indexToRemove = blasts.findIndex(function(b) { 
-    return b.id == blast.id 
-  })
-  blasts.splice(indexToRemove, 1);
 }
 
 function animateInnerCircle(time) {
@@ -193,16 +195,13 @@ function animateBlasts(delta, time) {
   }
 }
 
-// function animateMouseTrails(time) {
-//   for (var i = 0; i < mouseTrails.length; i++) {
-//     if (time - mouseTrails[i].timeCreated > mouseTrailFadeTime) {
-//       mouseTrails[i].path.remove();
-//       mouseTrails.splice(i, 1);
-//     } else {
-//       mouseTrails[i].path.opacity -= 0.1;
-//     }
-//   }
-// }
+function removeBlast(blast) {
+  blast.currentPath.remove();
+  var indexToRemove = blasts.findIndex(function(b) { 
+    return b.id == blast.id 
+  })
+  blasts.splice(indexToRemove, 1);
+}
 
 function animateAllWiggles(delta) {
   for (var i = 0; i < wiggles.length; i++) {
@@ -236,8 +235,6 @@ function animateAllWiggles(delta) {
 function animateClearingCircles(delta) {
   for (var i = 0; i < clearingCircles.length; i++) {
     if (clearingCircles[i].stage === 'clearing') {
-      // TODO: figure out why increasing time on these 
-      // falling wiggles and not normal ones is necessary
       dropIntersectedWiggles(clearingCircles[i].currentPath);
       clearingCircles[i].progress += delta;
       animateWiggle(
@@ -270,6 +267,15 @@ function finishClearing() {
 
   // reset inner circle
   innerCirclePath.remove();
+  if (innerCircleWavePathBottom) {
+    innerCircleWavePathBottom.remove();
+  }
+  if (innerCircleWavePathTop) {
+    innerCircleWavePathTop.remove();
+  }
+  if (innerCircleWavePath) {
+    innerCircleWavePath.remove();
+  }
   innerCirclePath = new Path.Circle(view.center, innerCircleRadius);
   innerCirclePath.bringToFront();
   innerCirclePath.fillColor = null;
@@ -321,9 +327,6 @@ function animateInnerCircleWave(event) {
 // MOUSE EVENTS
 
 function onMouseDown(event) {
-  mousePath = new Path();
-  mousePath.strokeColor = '#000000';
-
   if (
     innerCirclePath.contains(event.point) && 
     progressToNextPowerUp > 0 &&
@@ -335,56 +338,19 @@ function onMouseDown(event) {
   }
 }
 
-function onMouseDrag(event) {
-  // // add latest mouse location
-  // mousePath.add(event.point);
-
-  // // trim back end of mouse trail
-  // if (mousePath.segments.length > 30) {
-  //   mousePath.removeSegments(0, mousePath.segments.length - 30);
-  // }
-
-  // // set mouse trail color
-  // mousePath.strokeColor = {
-  //   gradient: {
-  //     stops: ['#FFFFFF', mouseTrailColor]
-  //   },
-  //   origin: mousePath.firstSegment.point,
-  //   destination: mousePath.lastSegment.point
-  // }
-  // mousePath.strokeWidth = mousePathStrokeWidth;
-
-  // // 1. get most recent segment of mouse movement
-  // // 2. check each wiggle to see if latest mouse movement hit it
-  // // 3. if so, save the offset of the intersection on that wiggle
-  // var mousePathLength = mousePath.segments.length;
-  // var lastMouseMovement = new Path(
-  //   [
-  //     mousePath.segments[mousePathLength - 2], 
-  //     mousePath.segments[mousePathLength - 1]
-  //   ]
-  // );
-  // dropIntersectedWiggles(lastMouseMovement);
-}
-
 function onMouseUp(event) {
   mouseUpLocation = event.point;
 
-  if (!isClearing && !isRewinding && mouseUpLocation.getDistance(mouseDownLocation) < 10) {
+  if (
+    !isClearing && 
+    !isRewinding && 
+    mouseUpLocation.getDistance(mouseDownLocation) < 10
+  ) {
     createBlast(event.point);
   }
 
   mouseDownLocation = null;
   isRewinding = false;
-
-  // add mouse trail to global array so it can be animated
-  // var mousePathClone = mousePath.clone();
-  // var mouseTrail = {
-  //   path: mousePathClone,
-  //   timeCreated: event.timeStamp / 1000
-  // };
-  // mouseTrails.push(mouseTrail);
-  // mousePath.remove();
 }
 
 // GROWING WIGGLE FUNCTIONS
@@ -607,7 +573,6 @@ function dropIntersectedWiggles(path) {
       }
     }
   });
-  // ath.remove();
   
   // drop any wiggles that were hit
   Object.keys(wiggleIntersectionOffsets).forEach(function(id) {
@@ -680,6 +645,9 @@ function dropWiggle(id, offset) {
     progressToNextPowerUp = 1;
   }
 
+  // animate intersection point
+  animateIntersection(wiggleHitPath.getPointAt(offset), true);
+
   // remove hit wiggle from scene
   removeWiggle(wiggleHit);
 
@@ -688,9 +656,6 @@ function dropWiggle(id, offset) {
   var fallingWiggle2 = wiggleHitPath.subtract(fallingWiggle1, { trace: false });
   addFallingWiggle(fallingWiggle1, wiggleFallColor, 'left');
   addFallingWiggle(fallingWiggle2, wiggleFallColor, 'right');
-
-  // animate intersection point
-  animateIntersection(wiggleHitPath.getPointAt(offset), true);
 
   // remove hit wiggle and increment wiggles cleared
   nWigglesCleared += 1;

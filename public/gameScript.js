@@ -1,8 +1,15 @@
 // game state variables
-var wiggles = [];
+var wiggles = []; // types: 'growing', 'falling', 'blast' (clearing & confetti handled separately)
+var blasts = [];
+var initialBlastRadius = 3;
+var blastStrokeWidth = 4;
+var maxBlastRadius = 50;
+var blastTime = 3;
+var mouseDownLocation = null;
+var mouseUpLocation = null;
 var nWiggles = 0;
 var progressToNextPowerUp = 0;
-var nWigglesToNextPowerUp = 3;
+var nWigglesToNextPowerUp = 5;
 var nWigglesLetThrough = 0;
 var nWigglesCleared = 0;
 var lastNWigglesCleared = -1;
@@ -51,11 +58,11 @@ var confettiDuration = 300;
 var confettiStrokeWidth = 3;
 
 // mouse trails
-var mouseTrails = [];
-var mousePath;
-var mouseTrailFadeTime = 2;
-var mouseTrailColor = clearingColor;
-var mousePathStrokeWidth = 3;
+// var mouseTrails = [];
+// var mousePath;
+// var mouseTrailFadeTime = 2;
+// var mouseTrailColor = clearingColor;
+// var mousePathStrokeWidth = 3;
 
 // clearing circle params
 var clearingCircles = [];
@@ -79,14 +86,7 @@ var innerCircleRadius = Math.ceil(outerCircleRadius / 6);
 var innerCirclePath = new Path.Circle(view.center, innerCircleRadius);
 innerCirclePath.strokeColor = innerCircleColor;
 innerCirclePath.strokeWidth = innerCircleStrokeWidth;
-innerCirclePath.onClick = function() {
-  if (canClear) {
-    initiateClearingCircle(false);
-    setTimeout(function() {
-      initiateClearingCircle(true) 
-    }, clearingCircleOffsetTime);
-  }
-}
+innerCirclePath.onClick = onClickInnerCircle;
 
 // set clearing circle radii
 var outerClearingCircleRadius = outerCircleRadius - 15;
@@ -128,14 +128,23 @@ function onFrame(event) {
     animateInnerCircleWave(event);
   }
   if (event.time > timeToNextWiggle && !isClearing && !isRewinding) {
-    createWiggle(event.time);
+    createGrowingWiggle(event.time);
     timeToNextWiggle = event.time + ((Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns);
   }
-  animateMouseTrails(event.time);
-  animateAllWiggles(event.delta, event.time);
+  // animateMouseTrails(event.time);
+  animateBlasts(event.delta, event.time);
   animateClearingCircles(event.delta, event.time);
+  animateAllWiggles(event.delta, event.time);
   // uncomment to check for excessive path creation
   // console.log(project.activeLayer.children.length);
+}
+
+function removeBlast(blast) {
+  blast.currentPath.remove();
+  var indexToRemove = blasts.findIndex(function(b) { 
+    return b.id == blast.id 
+  })
+  blasts.splice(indexToRemove, 1);
 }
 
 function animateInnerCircle(time) {
@@ -152,22 +161,42 @@ function animateInnerCircle(time) {
   );
 }
 
-function animateMouseTrails(time) {
-  for (var i = 0; i < mouseTrails.length; i++) {
-    if (time - mouseTrails[i].timeCreated > mouseTrailFadeTime) {
-      mouseTrails[i].path.remove();
-      mouseTrails.splice(i, 1);
+function animateBlasts(delta, time) {
+  for (var i = 0; i < blasts.length; i++) {
+    if (blasts[i].progress + delta < blastTime) {
+      blasts[i].progress += delta;
+      var newRadius = initialBlastRadius + (blasts[i].progress / blastTime) * (maxBlastRadius - initialBlastRadius);
+      var center = blasts[i].center;
+      blasts[i].currentPath.remove();
+      var path = new Path.Circle(center, newRadius);
+      path.strokeColor = clearingColor;
+      path.strokeWidth = blastStrokeWidth;
+      blasts[i].currentPath = path;
+      dropIntersectedWiggles(blasts[i].currentPath, time);
     } else {
-      mouseTrails[i].path.opacity -= 0.1;
+      removeBlast(blasts[i]);
     }
   }
 }
+
+// function animateMouseTrails(time) {
+//   for (var i = 0; i < mouseTrails.length; i++) {
+//     if (time - mouseTrails[i].timeCreated > mouseTrailFadeTime) {
+//       mouseTrails[i].path.remove();
+//       mouseTrails.splice(i, 1);
+//     } else {
+//       mouseTrails[i].path.opacity -= 0.1;
+//     }
+//   }
+// }
 
 function animateAllWiggles(delta, time) {
   for (var i = 0; i < wiggles.length; i++) {
     var wiggle = wiggles[i];
     var removed = false;
-    if (wiggle.type !== 'falling') {
+    if (wiggle.type === 'falling') {
+      animateFallingWiggle(wiggle, time);
+    } else {
       if (!isClearing) {
         if (!isRewinding) {
           wiggle.progress += delta;
@@ -181,13 +210,11 @@ function animateAllWiggles(delta, time) {
           }
         }
         if (!removed) {
-          animateGrowingWiggle(
+          animateWiggle(
             wiggle
           );
         }
       }
-    } else {
-      animateFallingWiggle(wiggle, time);
     }
   }
 }
@@ -199,7 +226,7 @@ function animateClearingCircles(delta, time) {
       // falling wiggles and not normal ones is necessary
       dropIntersectedWiggles(clearingCircles[i].currentPath, time + 0.3);
       clearingCircles[i].progress += delta;
-      animateGrowingWiggle(
+      animateWiggle(
         clearingCircles[i]
       );
       clearingCircleHeads[i].path.position = clearingCircles[i].currentPath.getPointAt(clearingCircles[i].currentPath.length);
@@ -228,14 +255,7 @@ function finishClearing() {
   innerCirclePath.fillColor = null;
   innerCirclePath.strokeColor = innerCircleColor;
   innerCirclePath.strokeWidth = innerCircleStrokeWidth;
-  innerCirclePath.onClick = function() {
-    if (canClear) {
-      initiateClearingCircle(false);
-      setTimeout(function () { 
-        initiateClearingCircle(true) 
-      }, clearingCircleOffsetTime);
-    }
-  }
+  innerCirclePath.onClick = onClickInnerCircle;
 
   isClearing = false;
   level += 1;
@@ -250,6 +270,15 @@ function finishClearing() {
     );
   });
   levelText.content = 'Level ' + level.toString();
+}
+
+function onClickInnerCircle() {
+  if (canClear) {
+    initiateClearingCircle(false);
+    setTimeout(function() {
+      initiateClearingCircle(true) 
+    }, clearingCircleOffsetTime);
+  }
 }
 
 function animateInnerCircleWave(event) {
@@ -281,57 +310,79 @@ function onMouseDown(event) {
     !canClear) 
   {
     isRewinding = true;
+  } else {
+    mouseDownLocation = event.point;
   }
 }
 
 function onMouseDrag(event) {
-  // add latest mouse location
-  mousePath.add(event.point);
+  // // add latest mouse location
+  // mousePath.add(event.point);
 
-  // trim back end of mouse trail
-  if (mousePath.segments.length > 30) {
-    mousePath.removeSegments(0, mousePath.segments.length - 30);
-  }
+  // // trim back end of mouse trail
+  // if (mousePath.segments.length > 30) {
+  //   mousePath.removeSegments(0, mousePath.segments.length - 30);
+  // }
 
-  // set mouse trail color
-  mousePath.strokeColor = {
-    gradient: {
-      stops: ['#FFFFFF', mouseTrailColor]
-    },
-    origin: mousePath.firstSegment.point,
-    destination: mousePath.lastSegment.point
-  }
-  mousePath.strokeWidth = mousePathStrokeWidth;
+  // // set mouse trail color
+  // mousePath.strokeColor = {
+  //   gradient: {
+  //     stops: ['#FFFFFF', mouseTrailColor]
+  //   },
+  //   origin: mousePath.firstSegment.point,
+  //   destination: mousePath.lastSegment.point
+  // }
+  // mousePath.strokeWidth = mousePathStrokeWidth;
 
-  // 1. get most recent segment of mouse movement
-  // 2. check each wiggle to see if latest mouse movement hit it
-  // 3. if so, save the offset of the intersection on that wiggle
-  var mousePathLength = mousePath.segments.length;
-  var lastMouseMovement = new Path(
-    [
-      mousePath.segments[mousePathLength - 2], 
-      mousePath.segments[mousePathLength - 1]
-    ]
-  );
-  dropIntersectedWiggles(lastMouseMovement, event.timeStamp / 1000);
+  // // 1. get most recent segment of mouse movement
+  // // 2. check each wiggle to see if latest mouse movement hit it
+  // // 3. if so, save the offset of the intersection on that wiggle
+  // var mousePathLength = mousePath.segments.length;
+  // var lastMouseMovement = new Path(
+  //   [
+  //     mousePath.segments[mousePathLength - 2], 
+  //     mousePath.segments[mousePathLength - 1]
+  //   ]
+  // );
+  // dropIntersectedWiggles(lastMouseMovement, event.timeStamp / 1000);
 }
 
 function onMouseUp(event) {
+  mouseUpLocation = event.point;
+
+  if (!isClearing && !isRewinding && mouseUpLocation.getDistance(mouseDownLocation) < 10) {
+    createBlast(event.point);
+  }
+
+  mouseDownLocation = null;
   isRewinding = false;
 
   // add mouse trail to global array so it can be animated
-  var mousePathClone = mousePath.clone();
-  var mouseTrail = {
-    path: mousePathClone,
-    timeCreated: event.timeStamp / 1000
-  };
-  mouseTrails.push(mouseTrail);
-  mousePath.remove();
+  // var mousePathClone = mousePath.clone();
+  // var mouseTrail = {
+  //   path: mousePathClone,
+  //   timeCreated: event.timeStamp / 1000
+  // };
+  // mouseTrails.push(mouseTrail);
+  // mousePath.remove();
 }
 
 // GROWING WIGGLE FUNCTIONS
 
-function createWiggle() {
+function createBlast(point) {
+  var path = new Path.Circle(point, initialBlastRadius);
+  path.strokeColor = clearingColor;
+  var blastData = {
+    id: 'w' + nWiggles.toString(), 
+    progress: 0,
+    center: point,
+    currentPath: path
+  };
+  blasts.push(blastData);
+  nWiggles += 1;
+}
+
+function createGrowingWiggle() {
   // set start & end
   var circleOffset = Math.random();
   var startPoint = innerCirclePath.getPointAt(circleOffset * innerCirclePath.length);
@@ -358,10 +409,10 @@ function createWiggle() {
   }
   path.insertSegments(1, wigglePoints);
   path.smooth({ type: 'continuous' });
-  addNewWiggle(path, direction);
+  addNewGrowingWiggle(path, direction);
 }
 
-function addNewWiggle(wigglePath, direction) {
+function addNewGrowingWiggle(wigglePath, direction) {
   var wiggleData = {
     id: 'w' + nWiggles.toString(), 
     fullPath: wigglePath,
@@ -375,12 +426,12 @@ function addNewWiggle(wigglePath, direction) {
   nWiggles += 1;
 }
 
-function animateGrowingWiggle(wiggle) {
+function animateWiggle(wiggle) {
   // remove wiggle if it reached outer circle
   if (wiggle.progress >= wiggle.curveTime) {
     if (wiggle.type == 'growing') {
       handleWiggleLetThrough(wiggle);
-    } else {
+    } else if (wiggle.type = 'clearing') {
       finishClearingCircle(wiggle);
     }
   } else {
@@ -523,7 +574,7 @@ function dropIntersectedWiggles(path, time) {
       }
     }
   });
-  path.remove();
+  // ath.remove();
   
   // drop any wiggles that were hit
   Object.keys(wiggleIntersectionOffsets).forEach(function(id) {

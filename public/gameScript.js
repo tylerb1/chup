@@ -12,7 +12,16 @@ var nWigglesCleared = 0;
 var lastNWigglesCleared = -1;
 var lastNWigglesLetThrough = -1;
 var level = 1;
-var levelColorAnimDuration = 500;
+var levelColorAnimDuration = 1200;
+var innerCircleEdgeAnimDuration = 750;
+
+// help modal objects & params
+var helpModalIsUp = true;
+var helpModalText = null;
+var helpModalOverlay = null;
+var helpModalRectangle = null;
+var helpModal = null;
+var clickedOutOfHelpModal = false;
 
 // inner circle
 var innerCircleColor = '#AFD0BF';
@@ -46,10 +55,10 @@ var timeToNextWiggle = (Math.random() * spawnFrequencyVariation) + baseTimeBetwe
 
 // blast params
 var blasts = [];
-var initialBlastRadius = 3;
-var blastStrokeWidth = 4;
-var maxBlastRadius = 30;
-var blastTime = 1.5;
+var initialBlastRadius = 4;
+var blastStrokeWidth = 3;
+var maxBlastRadius = 25;
+var blastTime = 1;
 var nExtraBlastSegments = 4;
 
 // intersection params
@@ -58,8 +67,8 @@ var wiggleFallRotation = 12;
 var clearingColor = '#5171A5';
 var wiggleFallColor = '#F0A202';
 var goodConfettiColor = '#F0A202';
-var badConfettiColor = '#B33951';
-var confettiDuration = 300;
+var badColor = '#B33951';
+var confettiDuration = 400;
 var confettiStrokeWidth = 3;
 
 // clearing circle params
@@ -68,7 +77,7 @@ var clearingCircleHeads = [];
 var clearingCircleCurveTime = 1.5;
 var canClear = false;
 var isClearing = false;
-var clearingCircleAnimDuration = 250;
+var clearingCircleAnimDuration = 800;
 var clearingCircleOffsetTime = 240;
 
 // create outer circle
@@ -87,6 +96,65 @@ innerCirclePath.strokeColor = innerCircleColor;
 innerCirclePath.strokeWidth = innerCircleStrokeWidth;
 innerCirclePath.onClick = onClickInnerCircle;
 
+// set help modal icon
+var helpIconQuestionMark = new PointText({
+	point: new Point(view.center.x + outerCircleRadius, 25),
+	justification: 'center',
+	fontSize: 24,
+  fontWeight: 400,
+  fontFamily: 'Courier',
+  strokeColor: clearingColor,
+  content: '?'
+});
+var helpIconCircle = new Path.Circle({
+  center: new Point(view.center.x + outerCircleRadius, 18),
+  radius: 16,
+  strokeColor: clearingColor,
+  strokeWidth: 2,
+  fillColor: '#CCCCCC'
+});
+var helpIcon = new Group([
+  helpIconCircle,
+  helpIconQuestionMark
+]);
+helpIcon.onClick = onClickHelp;
+
+// create help modal
+createHelpModal();
+
+function createHelpModal() {
+  helpModalText = new PointText({
+    point: new Point(0, 0),
+    justification: 'left',
+    fontSize: 16,
+    fontWeight: 400,
+    fontFamily: 'Courier',
+    strokeColor: '#000000',
+    content: '1. Tap to create a blast\n\n2. Hold the inner circle\nto rewind\n\n3. Tap the inner circle\nwhen it\'s flashing to\ngo to the next level'
+  });
+  helpModalRectangle = new Path.Rectangle({
+    point: new Point (view.center.x - helpModalText.bounds.width / 2, view.center.y - helpModalText.bounds.height / 2),
+    size: new Size(helpModalText.bounds.width + 16, helpModalText.bounds.height + 16),
+    fillColor: '#CCCCCC',
+    opacity: 0.5
+  });
+  // update text position after its dimensions & container are created
+  helpModalText.position = helpModalRectangle.position;
+  helpModalOverlay = new Path.Rectangle({
+    point: new Point(0, 0),
+    size: view.size,
+    fillColor: '#CCCCCC',
+    opacity: 0.2
+  });
+  helpModalOverlay.onClick = onClickHelp;
+  helpModal = new Group([
+    helpModalRectangle,
+    helpModalOverlay,
+    helpModalText
+  ]);
+  helpModal.bringToFront();
+}
+
 // set clearing circle radii
 var outerClearingCircleRadius = outerCircleRadius - 15;
 var innerClearingCircleRadius = innerCircleRadius + 15;
@@ -97,7 +165,7 @@ var levelText = new PointText({
 	justification: 'center',
 	fontSize: 16,
   fontWeight: 400,
-  fontFamily: 'Helvetica',
+  fontFamily: 'Courier',
   strokeColor: '#000000',
   content: 'Level 1'
 });
@@ -105,48 +173,53 @@ var levelText = new PointText({
 // ANIMATE GAME
 
 function onFrame(event) {
-  // allow or prevent clearing
-  canClear = progressToNextPowerUp >= 1 && !isClearing;
-
-  // animate inner circle edge
-  if (progressToNextPowerUp >= 1) {
-    animateInnerCircle(event.time);
-  }
-
-  // update inner circle wave progress
-  if (isRewinding) {
-    progressToNextPowerUp -= (event.delta / 2);
-    if (progressToNextPowerUp < 0) {
-      progressToNextPowerUp = 0;
-      isRewinding = false;
+  if (!helpModalIsUp) {
+    // allow or prevent clearing
+    canClear = progressToNextPowerUp >= 1 && !isClearing;
+    if (canClear) {
+      innerCirclePath.strokeColor = null;
     }
+
+    // animate inner circle edge
+    if (progressToNextPowerUp >= 1) {
+      animateInnerCircle(event.time);
+    }
+
+    // update inner circle wave progress
+    if (isRewinding) {
+      progressToNextPowerUp -= (event.delta / 2);
+      if (progressToNextPowerUp < 0) {
+        progressToNextPowerUp = 0;
+        isRewinding = false;
+      }
+    }
+
+    // move inner circle wave up or down
+    if (
+      lastNWigglesCleared !== nWigglesCleared ||
+      lastNWigglesLetThrough !== nWigglesLetThrough ||
+      isRewinding
+    ) {
+      moveInnerCircleWavePath();
+    }
+
+    // animate wave in inner circle
+    if (progressToNextPowerUp > 0 && progressToNextPowerUp < 1) {
+      animateInnerCircleWave(event);
+    }
+
+    // spawn new wiggles
+    if (event.time > timeToNextWiggle && !isClearing && !isRewinding) {
+      createGrowingWiggle(event.time);
+      timeToNextWiggle = event.time + ((Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns);
+    }
+
+    // animate existing game items
+    animateBlasts(event.delta, event.time);
+    animateClearingCircles(event.delta);
+    animateAllWiggles(event.delta);
   }
 
-  // move inner circle wave up or down
-  if (
-    lastNWigglesCleared !== nWigglesCleared ||
-    lastNWigglesLetThrough !== nWigglesLetThrough ||
-    isRewinding
-  ) {
-    moveInnerCircleWavePath();
-  }
-
-  // animate wave in inner circle
-  if (progressToNextPowerUp > 0 && progressToNextPowerUp < 1) {
-    animateInnerCircleWave(event);
-  }
-
-  // spawn new wiggles
-  if (event.time > timeToNextWiggle && !isClearing && !isRewinding) {
-    createGrowingWiggle(event.time);
-    timeToNextWiggle = event.time + ((Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns);
-  }
-
-  // animate existing game items
-  animateBlasts(event.delta, event.time);
-  animateClearingCircles(event.delta);
-  animateAllWiggles(event.delta);
-  
   // uncomment this to check for excessive path creation
   // console.log(project.activeLayer.children.length);
 }
@@ -167,28 +240,35 @@ function animateInnerCircle(time) {
 
 function animateBlasts(delta, time) {
   for (var i = 0; i < blasts.length; i++) {
-    if (blasts[i].progress + delta < blastTime) {
-      blasts[i].progress += delta;
-      var newRadius = initialBlastRadius + easeOutCubic(blasts[i].progress / blastTime) * (maxBlastRadius - initialBlastRadius);
+    blasts[i].progress += delta;
+    if (blasts[i].progress < blastTime) {
+      // increase blast radius
+      var normalizedProgress = blasts[i].progress / blastTime;
+      var newRadius = initialBlastRadius + easeOutCubic(normalizedProgress) * (maxBlastRadius - initialBlastRadius);
       var center = blasts[i].center;
       blasts[i].currentPath.remove();
       var path = new Path.Circle(center, newRadius);
-      for (var h = 0; h < blasts[i].extraSegments.length; h++) {
-        path.divideAt(blasts[i].extraSegments[h] * path.length);
+
+      // animate blast edges
+      for (var h = 0; h < nExtraBlastSegments; h++) {
+        path.divideAt(blasts[i].extraSegmentOffsets[h] * path.length);
       }
       for (var j = 0; j < path.segments.length; j++) {
         var offset = path.getOffsetOf(path.segments[j].point);
         var normalAtPoint = path.getNormalAt(offset);
-        path.segments[j].point += normalAtPoint * 2 * Math.sin(8 * time + 10 * j);
+        path.segments[j].point += normalAtPoint * 2 * Math.sin(6 * time + 10 * j);
       }
+
+      // tween blast color
       var color = (blasts[i].progress / blastTime) < 0.5
-        ? getTweenedColor('#FFFFFF', clearingColor, easeOutCubic(blasts[i].progress / blastTime))
-        : getTweenedColor(clearingColor, '#FFFFFF', easeInCubic(blasts[i].progress / blastTime));
-      path.strokeColor = color;
+        ? getTweenedColor('#FFFFFF', clearingColor, easeOutCubic(normalizedProgress))
+        : getTweenedColor(clearingColor, '#FFFFFF', easeInCubic(normalizedProgress));
       path.fillColor = color;
       path.strokeWidth = blastStrokeWidth;
       blasts[i].currentPath = path;
-      dropIntersectedWiggles(blasts[i].currentPath);
+
+      // clear wiggles hit by blast
+      dropIntersectedWiggles(blasts[i].currentPath, true);
     } else {
       removeBlast(blasts[i]);
     }
@@ -235,7 +315,7 @@ function animateAllWiggles(delta) {
 function animateClearingCircles(delta) {
   for (var i = 0; i < clearingCircles.length; i++) {
     if (clearingCircles[i].stage === 'clearing') {
-      dropIntersectedWiggles(clearingCircles[i].currentPath);
+      dropIntersectedWiggles(clearingCircles[i].currentPath, false);
       clearingCircles[i].progress += delta;
       animateWiggle(
         clearingCircles[i]
@@ -320,6 +400,7 @@ function animateInnerCircleWave(event) {
   innerCircleWavePath = new CompoundPath({
     children: [innerCircleWavePathBottom, innerCircleWavePathTop]
   });
+  innerCircleWavePath.sendToBack();
   innerCircleWavePath.fillRule = 'evenodd';
   innerCircleWavePath.fillColor = innerCircleColor;
 }
@@ -340,10 +421,12 @@ function onMouseDown(event) {
 
 function onMouseUp(event) {
   mouseUpLocation = event.point;
-
-  if (
+  if (clickedOutOfHelpModal) {
+    clickedOutOfHelpModal = false;
+  } else if (
     !isClearing && 
     !isRewinding && 
+    !helpIconCircle.contains(mouseDownLocation) &&
     mouseUpLocation.getDistance(mouseDownLocation) < 10
   ) {
     createBlast(event.point);
@@ -353,21 +436,35 @@ function onMouseUp(event) {
   isRewinding = false;
 }
 
+function onClickHelp() {
+  helpModalIsUp = !helpModalIsUp;
+  if (!helpModalIsUp) {
+    clickedOutOfHelpModal = true;
+    helpModalRectangle.remove();
+    helpModalText.remove();
+    helpModalOverlay.remove();
+    helpModal.remove();
+  } else {
+    clickedOutOfHelpModal = false;
+    createHelpModal();
+  }
+}
+
 // GROWING WIGGLE FUNCTIONS
 
 function createBlast(point) {
   var path = new Path.Circle(point, initialBlastRadius);
   path.strokeColor = clearingColor;
-  var extraSegments = [];
+  var extraSegmentOffsets = [];
   for (var i = 0; i < nExtraBlastSegments; i ++) {
-    extraSegments.push((i / nExtraBlastSegments) + (Math.random() * (0.5 / nExtraBlastSegments) + (0.25 / nExtraBlastSegments)));
+    extraSegmentOffsets.push((i / nExtraBlastSegments) + (Math.random() * (0.5 / nExtraBlastSegments) + (0.25 / nExtraBlastSegments)));
   }
   var blastData = {
     id: 'w' + nWiggles.toString(), 
     progress: 0,
     center: point,
     currentPath: path,
-    extraSegments: extraSegments
+    extraSegmentOffsets: extraSegmentOffsets
   };
   blasts.push(blastData);
   nWiggles += 1;
@@ -440,9 +537,13 @@ function handleWiggleLetThrough(wiggle) {
   progressToNextPowerUp -= (2.0 / nWigglesToNextPowerUp);
   if (progressToNextPowerUp < 1) {
     innerCirclePath.fillColor = null;
-    innerCirclePath.strokeColor = innerCircleColor;
     innerCirclePath.strokeWidth = innerCircleStrokeWidth;
   }
+  innerCirclePath.strokeColor = badColor;
+  innerCirclePath.tweenTo(
+    { strokeColor: innerCircleColor },
+    { duration: innerCircleEdgeAnimDuration, easing: 'easeOutQuad' }
+  );
   if (progressToNextPowerUp < 0) {
     progressToNextPowerUp = 0;
   }
@@ -459,7 +560,7 @@ function finishClearingCircle(wiggle) {
     return c.isInner === isInner;
   });
   var shrinkTween = clearingCircleHead.path.tweenTo(
-    { scaling: 1 },
+    { scaling: 1, opacity: 0 },
     { duration: clearingCircleAnimDuration, easing: 'easeOutQuint' }
   );
   wiggle.stage = 'shrink';
@@ -488,6 +589,7 @@ function redrawWiggleAlongPath(wiggle) {
   }
   pathToDraw.strokeWidth = wiggleStrokeWidth;
   pathToDraw.strokeCap = 'round';
+  pathToDraw.sendToBack();
   wiggle.currentPath = pathToDraw;
   fullPath.remove();
   splitPath.remove();
@@ -562,7 +664,7 @@ function getTweenedColorComponent(colorComponent, startColor, endColor, progress
 
 // FALLING WIGGLE FUNCTIONS
 
-function dropIntersectedWiggles(path) {
+function dropIntersectedWiggles(path, clearedByBlast) {
   var wiggleIntersectionOffsets = {};
   wiggles.forEach(function(wiggle) {
     if (wiggle.type !== 'falling' && !(wiggle.id in wiggleIntersectionOffsets)) {
@@ -577,6 +679,16 @@ function dropIntersectedWiggles(path) {
   // drop any wiggles that were hit
   Object.keys(wiggleIntersectionOffsets).forEach(function(id) {
     dropWiggle(id, wiggleIntersectionOffsets[id]);
+    // animate inner circle edge if necessary
+    if (progressToNextPowerUp >= 1) {
+      innerCirclePath.strokeColor = null;
+    } else if (clearedByBlast) {
+      innerCirclePath.strokeColor = clearingColor;
+      innerCirclePath.tweenTo(
+        { strokeColor: innerCircleColor },
+        { duration: innerCircleEdgeAnimDuration, easing: 'easeOutQuad' }
+      );
+    }
   });
 }
 
@@ -612,6 +724,7 @@ function moveInnerCircleWavePath() {
         innerCircleWavePathBottom
       ]
     });
+    innerCircleWavePath.sendToBack();
     innerCircleWaveHeight = Math.pow(3 * ((innerCircleRadius - Math.abs(view.center.y - waveLineY)) / innerCircleRadius), 2);
   }
 }
@@ -675,24 +788,24 @@ function animateIntersection(point, isGood) {
   var innerCircle = new Path.Circle(point, 8);
   var outerCircle = new Path.Circle(point, 32);
   var confetti = [];
-  var nConfets = Math.ceil(Math.random() * 5 + 5);
+  var nConfets = Math.ceil(Math.random() * 6 + 6);
   for (var i = 0; i < nConfets; i++) {
     var innerCirclePoint = innerCircle.getPointAt((i / nConfets) * innerCircle.length);
     var outerCirclePoint = outerCircle.getPointAt((i / nConfets) * outerCircle.length);
     var confet = new Path.Line(point, innerCirclePoint);
-    confet.strokeColor = isGood ? goodConfettiColor : badConfettiColor;
+    confet.strokeColor = isGood ? goodConfettiColor : badColor;
     confet.strokeWidth = confettiStrokeWidth;
-    confetti.push(confet);
     confet.tweenTo(
-      { 'position.x': outerCirclePoint.x, 'position.y': outerCirclePoint.y },
+      { 'position.x': outerCirclePoint.x, 'position.y': outerCirclePoint.y, 'opacity': 0 },
       { duration: confettiDuration, easing: 'easeOutQuad' }
     );
+    confetti.push(confet);
   }
   setTimeout(function () {
     confetti.forEach(function(c) {
       c.remove();
     });
-  }, confettiDuration + 20);
+  }, confettiDuration + 100);
   innerCircle.remove();
   outerCircle.remove();
 }

@@ -1,19 +1,16 @@
 // game state variables
-var wiggles = []; 
-// wiggle types: 'growing', 'falling' 
-// (clearing, blasts, & confetti handled separately)
+var wiggles = [];
+var nObjectsCreated = 0; 
 var mouseDownLocation = null;
-var mouseUpLocation = null;
-var nWiggles = 0;
 var progressToNextPowerUp = 0;
-var nWigglesToNextPowerUp = 5;
+var nWigglesToNextPowerUp = 3;
 var nWigglesLetThrough = 0;
 var nWigglesCleared = 0;
 var lastNWigglesCleared = -1;
 var lastNWigglesLetThrough = -1;
 var level = 1;
-var levelColorAnimDuration = 1200;
-var innerCircleEdgeAnimDuration = 750;
+var levelColorAnimDuration = 1000;
+var isRewinding = false;
 
 // help modal objects & params
 var helpModalIsUp = true;
@@ -25,41 +22,29 @@ var clickedOutOfHelpModal = false;
 
 // inner circle
 var innerCircleColor = '#AFD0BF';
-var nInnerCircleWaveSegments = 5;
+var waveLineY = 0;
+var nInnerCircleWaveSegments = 4;
 var innerCircleWaveHeight = 0;
 var innerCircleWavePath = null;
 var innerCircleWavePathTop = null;
 var innerCircleWavePathBottom = null;
 var innerCircleStrokeWidth = 4;
-var waveLineY = 0;
-var isRewinding = false;
-
-// outer circle
-var outerPadding = 24;
-var outerCircleColor = '#000000';
+var innerCircleEdgeAnimDuration = 500;
 
 // wiggle params
 var wiggleStrokeWidth = 4;
-var wiggleCurveTime = 6;
-var endWigglinessFactor = 4;
-var baseNumberWiggleSegments = 8;
+var wiggleCurveTime = 10;
+var endWigglinessFactor = 5;
+var baseNumberWiggleSegments = 12;
 var wiggleRewindingMultiplier = 3;
 
 // wiggle spawning params
-var baseTimeBetweenSpawns = 0.8;
-var spawnFrequencyVariation = 0.75;
+var baseTimeBetweenSpawns = 0.5;
+var baseTimeBetweenSpawnsMultiplier = 0.9;
+var spawnFrequencyVariation = 1;
 var spawnFrequencyVariationMultiplier = 0.9;
-var spawnFrequencyBaseMultiplier = 0.7;
 var wiggleCurveTimeMultiplier = 0.96;
 var timeToNextWiggle = (Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns;
-
-// blast params
-var blasts = [];
-var initialBlastRadius = 4;
-var blastStrokeWidth = 3;
-var maxBlastRadius = 25;
-var blastTime = 1;
-var nExtraBlastSegments = 4;
 
 // intersection params
 var initialFallVelocity = 10;
@@ -81,6 +66,8 @@ var clearingCircleAnimDuration = 800;
 var clearingCircleOffsetTime = 240;
 
 // create outer circle
+var outerPadding = 24;
+var outerCircleColor = '#000000';
 var outerCircleRadius = window.innerWidth > window.innerHeight 
   ? (window.innerHeight / 2) - outerPadding 
   : (window.innerWidth / 2) - outerPadding;
@@ -95,6 +82,25 @@ innerCirclePath.bringToFront();
 innerCirclePath.strokeColor = innerCircleColor;
 innerCirclePath.strokeWidth = innerCircleStrokeWidth;
 innerCirclePath.onClick = onClickInnerCircle;
+
+// blast params
+var blasts = [];
+var maxBlastRadius = Math.floor(innerCircleRadius * 1.2);
+var initialBlastRadius = Math.floor(maxBlastRadius / 5);
+var blastStrokeWidth = 3;
+var blastTime = 1.5;
+var nExtraBlastSegments = 4;
+
+// level text
+var levelText = new PointText({
+	point: new Point(view.center.x, view.center.y - outerCircleRadius - 8),
+	justification: 'center',
+	fontSize: 16,
+  fontWeight: 400,
+  fontFamily: 'Courier',
+  strokeColor: '#000000',
+  content: 'Level 1'
+});
 
 // set help modal icon
 var helpIconQuestionMark = new PointText({
@@ -111,7 +117,10 @@ var helpIconCircle = new Path.Circle({
   radius: 16,
   strokeColor: clearingColor,
   strokeWidth: 2,
-  fillColor: '#CCCCCC'
+  fillColor: '#CCCCCC',
+  shadowColor: new Color(0, 0, 0),
+  shadowBlur: 4,
+  shadowOffset: new Point(2, 2)
 });
 var helpIcon = new Group([
   helpIconCircle,
@@ -130,21 +139,22 @@ function createHelpModal() {
     fontWeight: 400,
     fontFamily: 'Courier',
     strokeColor: '#000000',
-    content: '1. Tap to create a blast\n\n2. Hold the inner circle\nto rewind\n\n3. Tap the inner circle\nwhen it\'s flashing to\ngo to the next level'
+    content: '> Blast away lines\nby tapping near them\n\n> Hold inner circle\nto rewind lines\n\n> Tap inner circle\nwhen flashing'
   });
   helpModalRectangle = new Path.Rectangle({
-    point: new Point (view.center.x - helpModalText.bounds.width / 2, view.center.y - helpModalText.bounds.height / 2),
-    size: new Size(helpModalText.bounds.width + 16, helpModalText.bounds.height + 16),
-    fillColor: '#CCCCCC',
-    opacity: 0.5
+    point: new Point(view.center.x - (helpModalText.bounds.width + 32) / 2, view.center.y - (helpModalText.bounds.height + 32) / 2),
+    size: new Size(helpModalText.bounds.width + 32, helpModalText.bounds.height + 32),
+    fillColor: '#555555',
+    opacity: 0.5,
+    radius: 10
   });
   // update text position after its dimensions & container are created
   helpModalText.position = helpModalRectangle.position;
   helpModalOverlay = new Path.Rectangle({
     point: new Point(0, 0),
     size: view.size,
-    fillColor: '#CCCCCC',
-    opacity: 0.2
+    fillColor: '#AAAAAA',
+    opacity: 0.5
   });
   helpModalOverlay.onClick = onClickHelp;
   helpModal = new Group([
@@ -158,17 +168,6 @@ function createHelpModal() {
 // set clearing circle radii
 var outerClearingCircleRadius = outerCircleRadius - 15;
 var innerClearingCircleRadius = innerCircleRadius + 15;
-
-// show level
-var levelText = new PointText({
-	point: new Point(view.center.x, view.center.y - outerCircleRadius - 8),
-	justification: 'center',
-	fontSize: 16,
-  fontWeight: 400,
-  fontFamily: 'Courier',
-  strokeColor: '#000000',
-  content: 'Level 1'
-});
 
 // ANIMATE GAME
 
@@ -215,7 +214,7 @@ function onFrame(event) {
     }
 
     // animate existing game items
-    animateBlasts(event.delta, event.time);
+    animateBlasts(event.delta);
     animateClearingCircles(event.delta);
     animateAllWiggles(event.delta);
   }
@@ -238,13 +237,13 @@ function animateInnerCircle(time) {
   );
 }
 
-function animateBlasts(delta, time) {
+function animateBlasts(delta) {
   for (var i = 0; i < blasts.length; i++) {
     blasts[i].progress += delta;
     if (blasts[i].progress < blastTime) {
       // increase blast radius
       var normalizedProgress = blasts[i].progress / blastTime;
-      var newRadius = initialBlastRadius + easeOutCubic(normalizedProgress) * (maxBlastRadius - initialBlastRadius);
+      var newRadius = initialBlastRadius + easeOutBack(normalizedProgress) * (maxBlastRadius - initialBlastRadius);
       var center = blasts[i].center;
       blasts[i].currentPath.remove();
       var path = new Path.Circle(center, newRadius);
@@ -256,7 +255,11 @@ function animateBlasts(delta, time) {
       for (var j = 0; j < path.segments.length; j++) {
         var offset = path.getOffsetOf(path.segments[j].point);
         var normalAtPoint = path.getNormalAt(offset);
-        path.segments[j].point += normalAtPoint * 2 * Math.sin(6 * time + 10 * j);
+        // determine blast animation speed at each point on blast edge using:
+        // progress of blast, index of circle segment around blast, and a random 
+        // factor (offset of first extra edge segment added)
+        var blastEdgeFactor = 10 * blasts[i].progress + 4 * j + 4 * blasts[i].extraSegmentOffsets[0];
+        path.segments[j].point += normalAtPoint * 4.5 * Math.sin(blastEdgeFactor);
       }
 
       // tween blast color
@@ -332,7 +335,7 @@ function finishClearing() {
   progressToNextPowerUp = 0;
   nWigglesToNextPowerUp = Math.ceil(1.2 * nWigglesToNextPowerUp);
   spawnFrequencyVariation *= spawnFrequencyVariationMultiplier;
-  baseTimeBetweenSpawns *= spawnFrequencyBaseMultiplier;
+  baseTimeBetweenSpawns *= baseTimeBetweenSpawnsMultiplier;
   wiggleCurveTime *= wiggleCurveTimeMultiplier;
   canClear = false;
   level += 1;
@@ -402,7 +405,13 @@ function animateInnerCircleWave(event) {
   });
   innerCircleWavePath.sendToBack();
   innerCircleWavePath.fillRule = 'evenodd';
-  innerCircleWavePath.fillColor = innerCircleColor;
+  innerCircleWavePath.fillColor = {
+    gradient: {
+      stops: ['#FFFFFF', innerCircleColor]
+    },
+    origin: view.center + innerCircleRadius,
+    destination: view.center
+  };
 }
 
 // MOUSE EVENTS
@@ -420,7 +429,7 @@ function onMouseDown(event) {
 }
 
 function onMouseUp(event) {
-  mouseUpLocation = event.point;
+  var mouseUpLocation = event.point;
   if (clickedOutOfHelpModal) {
     clickedOutOfHelpModal = false;
   } else if (
@@ -460,14 +469,15 @@ function createBlast(point) {
     extraSegmentOffsets.push((i / nExtraBlastSegments) + (Math.random() * (0.5 / nExtraBlastSegments) + (0.25 / nExtraBlastSegments)));
   }
   var blastData = {
-    id: 'w' + nWiggles.toString(), 
+    id: 'b' + nObjectsCreated.toString(), 
     progress: 0,
     center: point,
     currentPath: path,
-    extraSegmentOffsets: extraSegmentOffsets
+    extraSegmentOffsets: extraSegmentOffsets,
+    gradientStop: new Point(point + { x: 100 })
   };
   blasts.push(blastData);
-  nWiggles += 1;
+  nObjectsCreated += 1;
 }
 
 function createGrowingWiggle() {
@@ -502,7 +512,7 @@ function createGrowingWiggle() {
 
 function addNewGrowingWiggle(wigglePath, direction) {
   var wiggleData = {
-    id: 'w' + nWiggles.toString(), 
+    id: 'w' + nObjectsCreated.toString(), 
     fullPath: wigglePath,
     currentPath: new Path(),
     progress: 0,
@@ -511,7 +521,7 @@ function addNewGrowingWiggle(wigglePath, direction) {
     direction: direction
   };
   wiggles.push(wiggleData);
-  nWiggles += 1;
+  nObjectsCreated += 1;
 }
 
 function animateWiggle(wiggle) {
@@ -610,6 +620,16 @@ function easeOutCubic(x) {
   return 1 - Math.pow(1 - x, 3);
 }
 
+function easeOutExpo(x) {
+  return x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
+}
+
+function easeOutBack(x) {
+  var c1 = 1.70158;
+  var c3 = c1 + 1;
+  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+}
+
 function easeInCubic(x) {
   return Math.pow(x, 3);
 }
@@ -628,6 +648,7 @@ function getTweenedColorForPath(wiggle, origin, destination) {
   };
 }
 
+// TODO: use Color object & its components in Paper.js to reduce tweening effort
 function getTweenedColor(startColor, endColor, progress) {
   var r = getTweenedColorComponent('r', startColor, endColor, progress);
   var g = getTweenedColorComponent('g', startColor, endColor, progress);
@@ -725,7 +746,7 @@ function moveInnerCircleWavePath() {
       ]
     });
     innerCircleWavePath.sendToBack();
-    innerCircleWaveHeight = Math.pow(3 * ((innerCircleRadius - Math.abs(view.center.y - waveLineY)) / innerCircleRadius), 2);
+    innerCircleWaveHeight = Math.pow(4 * ((innerCircleRadius - Math.abs(view.center.y - waveLineY)) / innerCircleRadius), 2);
   }
 }
 
@@ -814,7 +835,7 @@ function addFallingWiggle(wigglePath, strokeColor, direction) {
   wigglePath.strokeColor = strokeColor;
   var droppedTime = Date.now();
   var wiggleData = {
-    id: 'w' + nWiggles.toString(), 
+    id: 'f' + nObjectsCreated.toString(), 
     fullPath: wigglePath,
     type: 'falling',
     fallingDirection: direction,
@@ -822,7 +843,7 @@ function addFallingWiggle(wigglePath, strokeColor, direction) {
   };
   wiggleData.fullPath.bringToFront();
   wiggles.push(wiggleData);
-  nWiggles += 1;
+  nObjectsCreated += 1;
 }
 
 function animateFallingWiggle(wiggle) {

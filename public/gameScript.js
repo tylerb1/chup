@@ -53,7 +53,7 @@ var clearingColor = '#5171A5';
 var wiggleFallColor = '#F0A202';
 var goodConfettiColor = '#F0A202';
 var badColor = '#B33951';
-var confettiDuration = 400;
+var confettiDuration = 600;
 var confettiStrokeWidth = 3;
 
 // clearing circle params
@@ -268,6 +268,7 @@ function animateBlasts(delta) {
         : getTweenedColor(clearingColor, '#FFFFFF', easeInCubic(normalizedProgress));
       path.fillColor = color;
       path.strokeWidth = blastStrokeWidth;
+      path.sendToBack();
       blasts[i].currentPath = path;
 
       // clear wiggles hit by blast

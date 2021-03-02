@@ -11,7 +11,7 @@ var lastNWigglesLetThrough = -1;
 var level = 1;
 var levelColorAnimDuration = 1000;
 var levelRotationAnimDuration = 300;
-var isRewinding = false;
+// var isRewinding = false;
 
 // help modal objects & params
 var helpModalIsUp = true;
@@ -194,19 +194,19 @@ function onFrame(event) {
     }
 
     // update inner circle wave progress
-    if (isRewinding) {
-      progressToNextPowerUp -= (event.delta / 2);
-      if (progressToNextPowerUp < 0) {
-        progressToNextPowerUp = 0;
-        isRewinding = false;
-      }
-    }
+    // if (isRewinding) {
+    //   progressToNextPowerUp -= (event.delta / 2);
+    //   if (progressToNextPowerUp < 0) {
+    //     progressToNextPowerUp = 0;
+    //     isRewinding = false;
+    //   }
+    // }
 
     // move inner circle wave up or down
     if (
       lastNWigglesCleared !== nWigglesCleared ||
-      lastNWigglesLetThrough !== nWigglesLetThrough ||
-      isRewinding
+      lastNWigglesLetThrough !== nWigglesLetThrough /* ||
+      isRewinding*/
     ) {
       moveInnerCircleWavePath();
     }
@@ -217,7 +217,7 @@ function onFrame(event) {
     }
 
     // spawn new wiggles
-    if (event.time > timeToNextWiggle && !isClearing && !isRewinding) {
+    if (event.time > timeToNextWiggle && !isClearing/* && !isRewinding*/) {
       createGrowingWiggle(event.time);
       timeToNextWiggle = event.time + ((Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns);
     }
@@ -312,14 +312,14 @@ function removeBlast(blast) {
 function animateAllWiggles(delta) {
   for (var i = 0; i < wiggles.length; i++) {
     var wiggle = wiggles[i];
-    var removed = false;
+    //var removed = false;
     if (wiggle.type === 'falling') {
       animateFallingWiggle(wiggle);
     } else {
       if (!isClearing) {
-        if (!isRewinding) {
+        // if (!isRewinding) {
           wiggle.progress += delta;
-        } else {
+        /*} else {
           if (wiggle.type === 'growing') {
             wiggle.progress -= delta * wiggleRewindingMultiplier;
             if (wiggle.progress <= 0) {
@@ -327,12 +327,12 @@ function animateAllWiggles(delta) {
               removed = true;
             }
           }
-        }
-        if (!removed) {
+        }*/
+        //if (!removed) {
           animateWiggle(
             wiggle
           );
-        }
+        //}
       }
     }
   }
@@ -455,15 +455,15 @@ function animateInnerCircleWave(event) {
 // MOUSE EVENTS
 
 function onMouseDown(event) {
-  if (
-    innerCirclePath.contains(event.point) && 
-    progressToNextPowerUp > 0 &&
-    !canClear
-  ) {
-    isRewinding = true;
-  } else {
+  // if (
+  //   innerCirclePath.contains(event.point) && 
+  //   progressToNextPowerUp > 0 &&
+  //   !canClear
+  // ) {
+  //   isRewinding = true;
+  // } else {
     mouseDownLocation = event.point;
-  }
+  // }
 }
 
 function onMouseUp(event) {
@@ -472,7 +472,7 @@ function onMouseUp(event) {
     clickedOutOfHelpModal = false;
   } else if (
     !isClearing && 
-    !isRewinding && 
+    // !isRewinding && 
     !helpIconCircle.contains(mouseDownLocation) &&
     mouseUpLocation.getDistance(mouseDownLocation) < 10
   ) {
@@ -480,7 +480,7 @@ function onMouseUp(event) {
   }
 
   mouseDownLocation = null;
-  isRewinding = false;
+  // isRewinding = false;
 }
 
 function onClickHelp() {
@@ -930,7 +930,6 @@ function initiateClearingCircle(isInner) {
     fillColor: {
       gradient: {
         stops: [[clearingColor, 0.5], [lightClearing, 0.7], [clearingColor, 0.9]],
-        radial: true
       },
       origin: view.center + { x: -2, y: -1 * radius - 2 },
       destination: view.center + { x: 2, y: -1 * radius + 2 }

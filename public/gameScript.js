@@ -11,14 +11,17 @@ var lastNWigglesLetThrough = -1;
 var level = 1;
 var levelColorAnimDuration = 1000;
 var levelRotationAnimDuration = 300;
-var isRewinding = false;
+var isHolding = false;
+var heldDownTime = 0;
+var heldDownTimeRadiusMultiplier = 35;
+var heldBlast = null;
+var holdingLocation = null;
 
 // help modal objects & params
 var helpModalIsUp = true;
 var helpModalText = null;
 var helpModalOverlay = null;
 var helpModalRectangle = null;
-var helpModal = null;
 var clickedOutOfHelpModal = false;
 
 // inner circle
@@ -31,13 +34,13 @@ var innerCircleWavePathTop = null;
 var innerCircleWavePathBottom = null;
 var innerCircleStrokeWidth = 4;
 var innerCircleEdgeAnimDuration = 500;
+var needToRecreateInnerCircle = false;
 
 // wiggle params
 var wiggleStrokeWidth = 4;
 var wiggleCurveTime = 10;
 var endWigglinessFactor = 5;
 var baseNumberWiggleSegments = 12;
-var wiggleRewindingMultiplier = 3;
 
 // wiggle spawning params
 var baseTimeBetweenSpawns = 0.5;
@@ -72,7 +75,7 @@ var clearingCircleAnimDuration = 800;
 var clearingCircleOffsetTime = 240;
 
 // create outer circle
-var outerPadding = 32;
+var outerPadding = 48;
 var outerCircleColor = '#000000';
 var outerCircleRadius = window.innerWidth > window.innerHeight 
   ? (window.innerHeight / 2) - outerPadding 
@@ -83,18 +86,14 @@ outerCirclePath.strokeColor = outerCircleColor;
 outerCirclePath.strokeWidth = 4;
 
 // create inner circle
-var innerCircleRadius = Math.ceil(outerCircleRadius / 6);
-var innerCirclePath = new Path.Circle(view.center, innerCircleRadius);
-innerCirclePath.bringToFront();
-innerCirclePath.strokeColor = innerCircleColor;
-innerCirclePath.fillColor = '#FFFFFF';
-innerCirclePath.strokeWidth = innerCircleStrokeWidth;
-innerCirclePath.onClick = onClickInnerCircle;
+var innerCircleRadius = Math.ceil(outerCircleRadius / 5);
+var innerCirclePath;
+createInnerCirclePath();
 
 // blast params
 var blasts = [];
-var maxBlastRadius = Math.floor(innerCircleRadius * 0.8);
-var initialBlastRadius = Math.floor(maxBlastRadius / 5);
+var baseBlastRadius = Math.floor(innerCircleRadius * 0.5);
+var initialBlastRadius = Math.floor(baseBlastRadius / 5);
 var blastStrokeWidth = 3;
 var blastTime = 1.5;
 var nExtraBlastSegments = 4;
@@ -119,6 +118,7 @@ var helpIconQuestionMark = new PointText({
   fontWeight: 400,
   fontFamily: 'Courier',
   strokeColor: clearingColor,
+  fillColor: clearingColor,
   content: '?'
 });
 var helpIconCircle = new Path.Circle({
@@ -140,25 +140,48 @@ helpIcon.onClick = onClickHelp;
 // create help modal
 createHelpModal();
 
-function createHelpModal() {
-  helpModalText = new PointText({
+function createHelpModalText(content) {
+  var helpModalText = new PointText({
     point: new Point(0, 0),
-    justification: 'left',
+    justification: 'center',
     fontSize: 16,
     fontWeight: 400,
     fontFamily: 'Courier',
     strokeColor: '#000000',
-    content: '> Blast away lines\nby tapping near them\n\n> Hold inner circle\nto rewind lines\n\n> Tap inner circle\nwhen flashing'
+    content: content
   });
-  helpModalRectangle = new Path.Rectangle({
-    point: new Point(view.center.x - (helpModalText.bounds.width + 32) / 2, view.center.y - (helpModalText.bounds.height + 32) / 2),
-    size: new Size(helpModalText.bounds.width + 32, helpModalText.bounds.height + 32),
-    fillColor: '#555555',
-    opacity: 0.5,
-    radius: 10
-  });
-  // update text position after its dimensions & container are created
-  helpModalText.position = helpModalRectangle.position;
+  return helpModalText;
+}
+
+function createHelpModal() {
+  var text1 = createHelpModalText('Blast away lines\nby tapping near them');
+  text1.position = { x: view.center.x, y: 32 };
+  var helpImage1 = new Raster('step1');
+  helpImage1.scale(0.25);
+  helpImage1.position = { x: view.center.x, y: text1.bounds.bottom + helpImage1.height / 8 };
+
+  var text2 = createHelpModalText('Hold longer to widen\n blast (at a cost)');
+  text2.position = { x: view.center.x, y: helpImage1.bounds.bottom + 20 };
+  var helpImage2 = new Raster('step2');
+  helpImage2.scale(0.25);
+  helpImage2.position = { x: view.center.x, y: text2.bounds.bottom + helpImage2.height / 8 };
+
+  var text3 = createHelpModalText('Tap inner circle\nwhen flashing');
+  text3.position = { x: view.center.x, y: helpImage2.bounds.bottom + 20 };
+  var helpImage3 = new Raster('step3');
+  helpImage3.scale(0.25);
+  helpImage3.position = { x: view.center.x, y: text3.bounds.bottom + helpImage3.height / 8 };
+
+  helpModalText = new Group([
+    text1,
+    helpImage1,
+    text2,
+    helpImage2,
+    text3,
+    helpImage3
+  ]);
+  helpModalText.position = view.center;
+
   helpModalOverlay = new Path.Rectangle({
     point: new Point(0, 0),
     size: view.size,
@@ -166,12 +189,16 @@ function createHelpModal() {
     opacity: 0.5
   });
   helpModalOverlay.onClick = onClickHelp;
-  helpModal = new Group([
-    helpModalRectangle,
-    helpModalOverlay,
-    helpModalText
-  ]);
-  helpModal.bringToFront();
+
+  helpModalRectangle = new Path.Rectangle({
+    point: new Point(view.center.x - helpModalText.bounds.width / 2 - 16, view.center.y - helpModalText.bounds.height / 2 - 8 ),
+    size: new Size(text1.bounds.width + 32, helpImage3.bounds.bottom - text1.bounds.top + 16),
+    fillColor: '#FFFFFF',
+    radius: 10
+  });
+
+  helpModalRectangle.bringToFront();
+  helpModalText.bringToFront();
 }
 
 // set clearing circle radii
@@ -188,25 +215,29 @@ function onFrame(event) {
       innerCirclePath.strokeColor = null;
     }
 
-    // animate inner circle edge
-    if (progressToNextPowerUp >= 1) {
-      animateInnerCircle(event.time);
+    if (needToRecreateInnerCircle) {
+      needToRecreateInnerCircle = false;
+      innerCirclePath.remove();
+      createInnerCirclePath();
     }
 
-    // update inner circle wave progress
-    if (isRewinding) {
-      progressToNextPowerUp -= (event.delta / 2);
-      if (progressToNextPowerUp < 0) {
-        progressToNextPowerUp = 0;
-        isRewinding = false;
-      }
+    // update blast radius preview & inner circle wave progress if needed
+    if (isHolding) {
+      innerCirclePath.strokeColor = innerCircleColor;
+      heldDownTime += event.delta;
+      animateHeldBlast(event);
+    }
+
+    // animate inner circle edge
+    if (progressToNextPowerUp >= 1) {
+      animateInnerCircleEdge(event.time);
     }
 
     // move inner circle wave up or down
     if (
       lastNWigglesCleared !== nWigglesCleared ||
       lastNWigglesLetThrough !== nWigglesLetThrough ||
-      isRewinding
+      isHolding
     ) {
       moveInnerCircleWavePath();
     }
@@ -217,7 +248,7 @@ function onFrame(event) {
     }
 
     // spawn new wiggles
-    if (event.time > timeToNextWiggle && !isClearing && !isRewinding) {
+    if (event.time > timeToNextWiggle && !isClearing) {
       createGrowingWiggle(event.time);
       timeToNextWiggle = event.time + ((Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns);
     }
@@ -233,7 +264,36 @@ function onFrame(event) {
   // console.log(project.activeLayer.children.length);
 }
 
-function animateInnerCircle(time) {
+function animateHeldBlast(event) {
+  progressToNextPowerUp -= (event.delta / 4);
+  if (progressToNextPowerUp <= 0) {
+    progressToNextPowerUp = 0;
+    isHolding = false;
+    createBlast(mouseHoldingLocation);
+    heldDownTime = 0;
+    if (heldBlast) {
+      heldBlast.currentPath.remove();
+      heldBlast = null;
+    }
+  } else {
+    if (heldDownTime > 0.2 && !heldBlast) {
+      createHeldBlast(mouseHoldingLocation);
+    } else if (heldBlast) {
+      var heldBlastRadius = baseBlastRadius + heldDownTime * heldDownTimeRadiusMultiplier;
+      heldBlast.currentPath.dashOffset += 0.5;
+      heldBlast.currentPath.radius = heldBlastRadius;
+    } else {
+      progressToNextPowerUp += (event.delta / 4);
+    }
+    if (progressToNextPowerUp < 1) {
+      innerCirclePath.fillColor = '#FFFFFF';
+      innerCirclePath.strokeWidth = innerCircleStrokeWidth;
+      needToRecreateInnerCircle = true;
+    }
+  }
+}
+
+function animateInnerCircleEdge(time) {
   innerCirclePath.strokeColor = null;
   for (var i = 0; i < innerCirclePath.segments.length; i++) {
     var offset = innerCirclePath.getOffsetOf(innerCirclePath.segments[i].point);
@@ -265,7 +325,7 @@ function animateBlasts(delta) {
     if (blasts[i].progress < blastTime) {
       // increase blast radius
       var normalizedProgress = blasts[i].progress / blastTime;
-      var newRadius = initialBlastRadius + easeOutBack(normalizedProgress) * (maxBlastRadius - initialBlastRadius);
+      var newRadius = initialBlastRadius + easeOutBack(normalizedProgress) * (blasts[i].endRadius - initialBlastRadius);
       var center = blasts[i].center;
       blasts[i].currentPath.remove();
       var path = new Path.Circle(center, newRadius);
@@ -291,7 +351,7 @@ function animateBlasts(delta) {
       var gradientColor = {
         gradient: {
           stops: [lightClearing, color],
-          radial: true,
+          radial: true
         },
         origin: blasts[i].center - {x: newRadius * 2 * blasts[i].gradientStartX, y: newRadius * 2 * blasts[i].gradientStartY },
         destination: blasts[i].center + {x: newRadius * 2 * blasts[i].gradientStartX, y: newRadius * 2 * blasts[i].gradientStartY }
@@ -320,28 +380,13 @@ function removeBlast(blast) {
 function animateAllWiggles(delta) {
   for (var i = 0; i < wiggles.length; i++) {
     var wiggle = wiggles[i];
-    var removed = false;
     if (wiggle.type === 'falling') {
       animateFallingWiggle(wiggle);
-    } else {
-      if (!isClearing) {
-        if (!isRewinding) {
-          wiggle.progress += delta;
-        } else {
-          if (wiggle.type === 'growing') {
-            wiggle.progress -= delta * wiggleRewindingMultiplier;
-            if (wiggle.progress <= 0) {
-              removeWiggle(wiggle);
-              removed = true;
-            }
-          }
-        }
-        if (!removed) {
-          animateWiggle(
-            wiggle
-          );
-        }
-      }
+    } else if (!isClearing) {
+      wiggle.progress += delta;
+      animateWiggle(
+        wiggle
+      );
     }
   }
 }
@@ -390,12 +435,7 @@ function finishClearing() {
   if (innerCircleWavePath) {
     innerCircleWavePath.remove();
   }
-  innerCirclePath = new Path.Circle(view.center, innerCircleRadius);
-  innerCirclePath.bringToFront();
-  innerCirclePath.fillColor = '#FFFFFF';
-  innerCirclePath.strokeColor = innerCircleColor;
-  innerCirclePath.strokeWidth = innerCircleStrokeWidth;
-  innerCirclePath.onClick = onClickInnerCircle;
+  createInnerCirclePath();
 
   // animate level text
   var tweenIntoColor = levelText.tweenTo(
@@ -409,12 +449,12 @@ function finishClearing() {
     );
   });
   var tweenRotation = levelText.tweenTo(
-    { rotation: Math.PI },
+    { rotation: Math.PI * 2 },
     { duration: levelRotationAnimDuration, easing: 'easeOutQuint' }
   );
   tweenRotation.then(function() {
     var tweenRotation2 = levelText.tweenTo(
-      { rotation: -1 * Math.PI },
+      { rotation: -2 * Math.PI },
       { duration: levelRotationAnimDuration, easing: 'easeInQuint' }
     );
     tweenRotation2.then(function () {
@@ -425,6 +465,15 @@ function finishClearing() {
     });
   });
   levelText.content = 'Level ' + level.toString();
+}
+
+function createInnerCirclePath() {
+  innerCirclePath = new Path.Circle(view.center, innerCircleRadius);
+  innerCirclePath.bringToFront();
+  innerCirclePath.fillColor = '#FFFFFF';
+  innerCirclePath.strokeColor = innerCircleColor;
+  innerCirclePath.strokeWidth = innerCircleStrokeWidth;
+  innerCirclePath.onClick = onClickInnerCircle;
 }
 
 function onClickInnerCircle() {
@@ -464,31 +513,46 @@ function animateInnerCircleWave(event) {
 
 function onMouseDown(event) {
   if (
-    innerCirclePath.contains(event.point) && 
-    progressToNextPowerUp > 0 &&
-    !canClear
+    !innerCirclePath.contains(event.point) && 
+    progressToNextPowerUp > 0
   ) {
-    isRewinding = true;
-  } else {
-    mouseDownLocation = event.point;
+    isHolding = true;
+  }
+  mouseDownLocation = event.point;
+  mouseHoldingLocation = event.point;
+}
+
+function onMouseDrag(event) {
+  if (isHolding && heldBlast) {
+    mouseHoldingLocation = event.point;
+    if (heldBlast) {
+      heldBlast.currentPath.position = mouseHoldingLocation;
+    }
   }
 }
 
 function onMouseUp(event) {
   var mouseUpLocation = event.point;
+  isHolding = false;
   if (clickedOutOfHelpModal) {
     clickedOutOfHelpModal = false;
   } else if (
+    !helpModalIsUp &&
     !isClearing && 
-    !isRewinding && 
     !helpIconCircle.contains(mouseDownLocation) &&
     mouseUpLocation.getDistance(mouseDownLocation) < 10
   ) {
     createBlast(event.point);
   }
 
+  heldDownTime = 0;
+  if (heldBlast) {
+    heldBlast.currentPath.remove();
+    heldBlast = null;
+  }
+  mouseUpLocation = null;
   mouseDownLocation = null;
-  isRewinding = false;
+  mouseHoldingLocation = null;
 }
 
 function onClickHelp() {
@@ -496,9 +560,8 @@ function onClickHelp() {
   if (!helpModalIsUp) {
     clickedOutOfHelpModal = true;
     helpModalRectangle.remove();
-    helpModalText.remove();
     helpModalOverlay.remove();
-    helpModal.remove();
+    helpModalText.remove();
   } else {
     clickedOutOfHelpModal = false;
     createHelpModal();
@@ -509,7 +572,6 @@ function onClickHelp() {
 
 function createBlast(point) {
   var path = new Path.Circle(point, initialBlastRadius);
-  path.strokeColor = clearingColor;
   var extraSegmentOffsets = [];
   for (var i = 0; i < nExtraBlastSegments; i ++) {
     extraSegmentOffsets.push((i / nExtraBlastSegments) + (Math.random() * (0.5 / nExtraBlastSegments) + (0.25 / nExtraBlastSegments)));
@@ -520,11 +582,26 @@ function createBlast(point) {
     progress: 0,
     center: point,
     currentPath: path,
+    endRadius: baseBlastRadius + heldDownTime * heldDownTimeRadiusMultiplier,
     extraSegmentOffsets: extraSegmentOffsets,
-    gradientStartX: (Math.random() + 1) * randDirection,
-    gradientStartY: (Math.random() + 1) * randDirection
+    gradientStartX: ((Math.random() / 2) + 1) * randDirection,
+    gradientStartY: ((Math.random() / 2) + 1) * randDirection
   };
   blasts.push(blastData);
+  nObjectsCreated += 1;
+}
+
+function createHeldBlast(point) {
+  var path = new Shape.Circle(point, initialBlastRadius);
+  path.strokeWidth = wiggleStrokeWidth;
+  path.strokeColor = clearingColor;
+  path.dashArray = [15, 10];
+  path.applyMatrix = false;
+  var blastData = {
+    id: 'hb' + nObjectsCreated.toString(), 
+    currentPath: path
+  };
+  heldBlast = blastData;
   nObjectsCreated += 1;
 }
 
@@ -940,10 +1017,11 @@ function initiateClearingCircle(isInner) {
     radius: 2,
     fillColor: {
       gradient: {
-        stops: [[clearingColor, 0.3], [lightClearing, 0.6], [clearingColor, 0.9]],
+        stops: [lightClearing, clearingColor],
+        radial: true
       },
-      origin: view.center + { x: -2, y: -1 * radius - 2 },
-      destination: view.center + { x: 2, y: -1 * radius + 2 }
+      origin: view.center + { x: 0.5, y: -1 * radius - 0.5 },
+      destination: view.center + { x: -2, y: -1 * radius + 2 }
     },
     applyMatrix: false,
   });

@@ -75,7 +75,7 @@ var clearingCircleAnimDuration = 800;
 var clearingCircleOffsetTime = 240;
 
 // create outer circle
-var outerPadding = 48;
+var outerPadding = 24;
 var outerCircleColor = '#000000';
 var outerCircleRadius = window.innerWidth > window.innerHeight 
   ? (window.innerHeight / 2) - outerPadding 
@@ -92,7 +92,7 @@ createInnerCirclePath();
 
 // blast params
 var blasts = [];
-var baseBlastRadius = Math.floor(innerCircleRadius * 0.5);
+var baseBlastRadius = Math.floor(innerCircleRadius * 0.6);
 var initialBlastRadius = Math.floor(baseBlastRadius / 5);
 var blastStrokeWidth = 3;
 var blastTime = 1.5;
@@ -276,7 +276,7 @@ function animateHeldBlast(event) {
       heldBlast = null;
     }
   } else {
-    if (heldDownTime > 0.2 && !heldBlast) {
+    if (heldDownTime > 0.12 && !heldBlast) {
       createHeldBlast(mouseHoldingLocation);
     } else if (heldBlast) {
       var heldBlastRadius = baseBlastRadius + heldDownTime * heldDownTimeRadiusMultiplier;
@@ -720,7 +720,7 @@ function redrawWiggleAlongPath(wiggle) {
     var destination = pathToDraw.getPointAt(pathToDraw.length);
     pathToDraw.strokeColor = getTweenedColorForPath(wiggle, origin, destination);
   } else {
-    pathToDraw.strokeColor = clearingColor;
+    pathToDraw.strokeColor = lightClearing;
   }
   pathToDraw.strokeWidth = wiggleStrokeWidth;
   pathToDraw.strokeCap = 'round';

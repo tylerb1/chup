@@ -50,14 +50,14 @@ var timeToNextWiggle = (Math.random() * spawnFrequencyVariation) + baseTimeBetwe
 // intersection params
 var initialFallVelocity = 10;
 var wiggleFallRotation = 12;
-var clearingColor = '#5171A5';
+var clearingColor = '#5171A8';
 var wiggleFallColor = '#F0A202';
 var goodConfettiColor = '#F0A202';
 var badColor = '#B33951';
 var lightClearing = getTweenedColor(
   clearingColor, 
   '#FFFFFF',
-  0.8
+  0.9
 );
 var confettiDuration = 600;
 var confettiStrokeWidth = 3;
@@ -93,7 +93,7 @@ innerCirclePath.onClick = onClickInnerCircle;
 
 // blast params
 var blasts = [];
-var maxBlastRadius = Math.floor(innerCircleRadius * 1.2);
+var maxBlastRadius = Math.floor(innerCircleRadius * 0.8);
 var initialBlastRadius = Math.floor(maxBlastRadius / 5);
 var blastStrokeWidth = 3;
 var blastTime = 1.5;
@@ -288,7 +288,15 @@ function animateBlasts(delta) {
       var color = (blasts[i].progress / blastTime) < 0.5
         ? getTweenedColor('#FFFFFF', clearingColor, easeOutCubic(normalizedProgress))
         : getTweenedColor(clearingColor, '#FFFFFF', easeInCubic(normalizedProgress));
-      path.fillColor = color;
+      var gradientColor = {
+        gradient: {
+          stops: [lightClearing, color],
+          radial: true,
+        },
+        origin: blasts[i].center - {x: newRadius * 2 * blasts[i].gradientStartX, y: newRadius * 2 * blasts[i].gradientStartY },
+        destination: blasts[i].center + {x: newRadius * 2 * blasts[i].gradientStartX, y: newRadius * 2 * blasts[i].gradientStartY }
+      }
+      path.fillColor = gradientColor;
       path.strokeWidth = blastStrokeWidth;
       path.insertAbove(outerCirclePath);
       blasts[i].currentPath = path;
@@ -506,12 +514,15 @@ function createBlast(point) {
   for (var i = 0; i < nExtraBlastSegments; i ++) {
     extraSegmentOffsets.push((i / nExtraBlastSegments) + (Math.random() * (0.5 / nExtraBlastSegments) + (0.25 / nExtraBlastSegments)));
   }
+  var randDirection = Math.random() > 0.5 ? 1 : -1;
   var blastData = {
     id: 'b' + nObjectsCreated.toString(), 
     progress: 0,
     center: point,
     currentPath: path,
-    extraSegmentOffsets: extraSegmentOffsets
+    extraSegmentOffsets: extraSegmentOffsets,
+    gradientStartX: (Math.random() + 1) * randDirection,
+    gradientStartY: (Math.random() + 1) * randDirection
   };
   blasts.push(blastData);
   nObjectsCreated += 1;
@@ -929,7 +940,7 @@ function initiateClearingCircle(isInner) {
     radius: 2,
     fillColor: {
       gradient: {
-        stops: [[clearingColor, 0.5], [lightClearing, 0.7], [clearingColor, 0.9]],
+        stops: [[clearingColor, 0.3], [lightClearing, 0.6], [clearingColor, 0.9]],
       },
       origin: view.center + { x: -2, y: -1 * radius - 2 },
       destination: view.center + { x: 2, y: -1 * radius + 2 }

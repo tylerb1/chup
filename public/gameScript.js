@@ -75,7 +75,9 @@ var isClearing = false;
 var clearingCircleAnimDuration = 800;
 var clearingCircleOffsetTime = 240;
 
-view.requestUpdate();
+view.autoUpdate = false;
+view.update();
+view.autoUpdate = true;
 
 // create outer circle
 var outerPadding = 32;

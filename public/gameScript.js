@@ -507,7 +507,6 @@ function animateInnerCircleWave(event) {
   };
   innerCircleWavePath.fillRule = 'evenodd';
   innerCircleWavePath.firstChild.smooth();
-  innerCircleWavePath.lastChild.smooth();
 }
 
 // MOUSE EVENTS

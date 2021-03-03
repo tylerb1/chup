@@ -20,5 +20,13 @@
     </a>
     <script type="text/javascript" src="/paper.js"></script>
     <script type="text/paperscript" src="/gameScript.js" canvas="myCanvas"></script>
+    <script type="text/javascript">
+    window.onload = function() {
+      if (!window.location.hash) {
+        window.location = window.location + '#loaded';
+        window.location.reload();
+      }
+    }
+    </script>
   </body>
 </html>

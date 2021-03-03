@@ -492,13 +492,13 @@ function animateInnerCircleWave(event) {
     var sinus = Math.sin(event.time * 3 + i);
     segment.point.y = sinus * innerCircleWaveHeight + waveLineY;
   }
-  //innerCircleWavePathTop.smooth();
   if (innerCircleWavePath) {
     innerCircleWavePath.remove();
   }
   innerCircleWavePath = new CompoundPath({
     children: [innerCircleWavePathTop, innerCircleWavePathBottom]
   });
+  innerCircleWavePath.smooth();
   innerCircleWavePath.fillColor = {
     gradient: {
       stops: [innerCircleColor, '#FFFFFF']

@@ -266,7 +266,7 @@ function onFrame(event) {
 
 function animateHeldBlast(event) {
   progressToNextPowerUp -= event.delta / 2;
-  if (progressToNextPowerUp < 0) {
+  if (progressToNextPowerUp <= 0) {
     progressToNextPowerUp = 0;
     isHolding = false;
     createBlast(mouseHoldingLocation);
@@ -849,7 +849,7 @@ function moveInnerCircleWavePath() {
   if (innerCircleWavePath) {
     innerCircleWavePath.remove();
   }
-  waveLineY = innerCirclePath.bounds.bottom - progressToNextPowerUp * innerCirclePath.bounds.height;
+  waveLineY = Math.ceil(innerCirclePath.bounds.bottom - progressToNextPowerUp * innerCirclePath.bounds.height);
   var innerCircleEndpoints = getInnerCircleEndpoints();
   if (innerCircleEndpoints.length === 2) {
     innerCircleWavePathTop = new Path.Line(innerCircleEndpoints[0] + {x: 2, y: 0 }, innerCircleEndpoints[1] - {x: 2, y: 0 });

@@ -266,7 +266,7 @@ function onFrame(event) {
 
 function animateHeldBlast(event) {
   progressToNextPowerUp -= event.delta / 2;
-  if (progressToNextPowerUp <= 0) {
+  if (progressToNextPowerUp < 0) {
     progressToNextPowerUp = 0;
     isHolding = false;
     createBlast(mouseHoldingLocation);
@@ -669,12 +669,12 @@ function handleWiggleLetThrough(wiggle) {
   wiggles.splice(i, 1);
   nWigglesLetThrough += 1;
   progressToNextPowerUp -= 2.0 / nWigglesToNextPowerUp;
+  if (progressToNextPowerUp < 0) {
+    progressToNextPowerUp = 0;
+  }
   if (progressToNextPowerUp < 1) {
     innerCirclePath.fillColor = '#FFFFFF';
     innerCirclePath.strokeWidth = innerCircleStrokeWidth;
-  }
-  if (progressToNextPowerUp < 0) {
-    progressToNextPowerUp = 0;
   }
   innerCirclePath.strokeColor = badColor;
   innerCirclePath.tweenTo(
@@ -849,7 +849,7 @@ function moveInnerCircleWavePath() {
   if (innerCircleWavePath) {
     innerCircleWavePath.remove();
   }
-  waveLineY = Math.ceil(innerCirclePath.bounds.bottom - progressToNextPowerUp * innerCirclePath.bounds.height + 1);
+  waveLineY = innerCirclePath.bounds.bottom - progressToNextPowerUp * innerCirclePath.bounds.height;
   var innerCircleEndpoints = getInnerCircleEndpoints();
   if (innerCircleEndpoints.length === 2) {
     innerCircleWavePathTop = new Path.Line(innerCircleEndpoints[0], innerCircleEndpoints[1]);

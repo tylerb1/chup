@@ -106,7 +106,7 @@ var levelText = new PointText({
   fontWeight: 400,
   fontFamily: 'Courier',
   strokeColor: '#000000',
-  content: 'Level 1',
+  content: view.center.y,
   applyMatrix: false,
 });
 

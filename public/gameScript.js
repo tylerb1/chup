@@ -279,7 +279,7 @@ function animateHeldBlast(event) {
     if (heldDownTime > 0.15 && !heldBlast) {
       createHeldBlast(mouseHoldingLocation);
     } else if (heldBlast) {
-      var heldBlastRadius = baseBlastRadius + heldDownTime * heldDownTimeRadiusMultiplier;
+      var heldBlastRadius = baseBlastRadius + heldDownTime * heldDownTimeRadiusMultiplier * 2;
       heldBlast.currentPath.dashOffset += 1.5;
       heldBlast.currentPath.radius = heldBlastRadius;
     } else {

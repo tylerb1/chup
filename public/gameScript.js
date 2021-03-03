@@ -16,6 +16,7 @@ var heldDownTime = 0;
 var heldDownTimeRadiusMultiplier = 80;
 var heldBlast = null;
 var holdingLocation = null;
+var blastWasForced = false;
 
 // help modal objects & params
 var helpModalIsUp = true;
@@ -271,6 +272,7 @@ function animateHeldBlast(event) {
   if (progressToNextPowerUp <= 0) {
     progressToNextPowerUp = 0;
     isHolding = false;
+    blastWasForced = true;
     createBlast(mouseHoldingLocation);
     heldDownTime = 0;
     if (heldBlast) {
@@ -541,11 +543,12 @@ function onMouseUp(event) {
   } else if (
     !helpModalIsUp &&
     !isClearing && 
+    !blastWasForced &&
     !helpIconCircle.contains(mouseDownLocation)
   ) {
     createBlast(event.point);
   }
-
+  blastWasForced = false;
   heldDownTime = 0;
   if (heldBlast) {
     heldBlast.currentPath.remove();

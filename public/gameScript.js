@@ -13,7 +13,7 @@ var levelColorAnimDuration = 1000;
 var levelRotationAnimDuration = 300;
 var isHolding = false;
 var heldDownTime = 0;
-var heldDownTimeRadiusMultiplier = 42;
+var heldDownTimeRadiusMultiplier = 80;
 var heldBlast = null;
 var holdingLocation = null;
 
@@ -44,10 +44,10 @@ var baseNumberWiggleSegments = 12;
 
 // wiggle spawning params
 var baseTimeBetweenSpawns = 0.5;
-var baseTimeBetweenSpawnsMultiplier = 0.9;
-var spawnFrequencyVariation = 1;
-var spawnFrequencyVariationMultiplier = 0.9;
-var wiggleCurveTimeMultiplier = 0.96;
+var baseTimeBetweenSpawnsMultiplier = 0.8;
+var spawnFrequencyVariation = 2;
+var spawnFrequencyVariationMultiplier = 0.8;
+var wiggleCurveTimeMultiplier = 0.98;
 var timeToNextWiggle = (Math.random() * spawnFrequencyVariation) + baseTimeBetweenSpawns;
 
 // intersection params
@@ -92,7 +92,7 @@ createInnerCirclePath();
 
 // blast params
 var blasts = [];
-var baseBlastRadius = Math.floor(innerCircleRadius * 0.4);
+var baseBlastRadius = Math.floor(innerCircleRadius * 0.5);
 var initialBlastRadius = Math.floor(baseBlastRadius / 5);
 var blastStrokeWidth = 3;
 var blastTime = 1.5;
@@ -265,7 +265,7 @@ function onFrame(event) {
 }
 
 function animateHeldBlast(event) {
-  progressToNextPowerUp -= (event.delta / 4);
+  progressToNextPowerUp -= (event.delta / 2);
   if (progressToNextPowerUp <= 0) {
     progressToNextPowerUp = 0;
     isHolding = false;
@@ -279,7 +279,7 @@ function animateHeldBlast(event) {
     if (heldDownTime > 0.15 && !heldBlast) {
       createHeldBlast(mouseHoldingLocation);
     } else if (heldBlast) {
-      var heldBlastRadius = baseBlastRadius + heldDownTime * heldDownTimeRadiusMultiplier * 2;
+      var heldBlastRadius = baseBlastRadius + heldDownTime * heldDownTimeRadiusMultiplier;
       heldBlast.currentPath.dashOffset += 1.5;
       heldBlast.currentPath.radius = heldBlastRadius;
     } else {
@@ -341,7 +341,7 @@ function animateBlasts(delta) {
         // progress of blast, index of circle segment around blast, and a random 
         // factor (offset of first extra edge segment added)
         var blastEdgeFactor = 10 * blasts[i].progress + 4 * j + 4 * blasts[i].extraSegmentOffsets[0];
-        path.segments[j].point += normalAtPoint * 4.5 * Math.sin(blastEdgeFactor);
+        path.segments[j].point += normalAtPoint * 3 * Math.sin(blastEdgeFactor);
       }
 
       // tween blast color

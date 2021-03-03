@@ -532,7 +532,7 @@ function onMouseDrag(event) {
 }
 
 function onMouseUp(event) {
-  var mouseUpLocation = event.point;
+  mouseUpLocation = event.point;
   isHolding = false;
   if (clickedOutOfHelpModal) {
     clickedOutOfHelpModal = false;

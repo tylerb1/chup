@@ -339,13 +339,11 @@ function animateBlasts(delta) {
         path.divideAt(blasts[i].extraSegmentOffsets[h] * path.length);
       }
       for (var j = 0; j < path.segments.length; j++) {
-        var offset = path.getOffsetOf(path.segments[j].point);
-        var normalAtPoint = path.getNormalAt(offset);
         // determine blast animation speed at each point on blast edge using:
         // progress of blast, index of circle segment around blast, and a random 
         // factor (offset of first extra edge segment added)
         var blastEdgeFactor = 10 * blasts[i].progress + 4 * j + 4 * blasts[i].extraSegmentOffsets[0];
-        path.segments[j].point += normalAtPoint * 3 * Math.sin(blastEdgeFactor);
+        path.segments[j].point += blasts[i].segmentNormals[j] * 3 * Math.sin(blastEdgeFactor);
       }
 
       // tween blast color
@@ -578,8 +576,15 @@ function onClickHelp() {
 function createBlast(point) {
   var path = new Path.Circle(point, initialBlastRadius);
   var extraSegmentOffsets = [];
-  for (var i = 0; i < nExtraBlastSegments; i ++) {
-    extraSegmentOffsets.push((i / nExtraBlastSegments) + (Math.random() * (0.5 / nExtraBlastSegments) + (0.25 / nExtraBlastSegments)));
+  var segmentNormals = [];
+  for (var i = 0; i < nExtraBlastSegments; i++) {
+    var offset = (i / nExtraBlastSegments) + (Math.random() * (0.5 / nExtraBlastSegments) + (0.25 / nExtraBlastSegments));
+    extraSegmentOffsets.push(offset);
+    path.divideAt(offset * path.length);
+  }
+  for (var j = 0; j < path.segments.length; j++) {
+    var offset = path.getOffsetOf(path.segments[j].point);
+    segmentNormals.push(path.getNormalAt(offset));
   }
   var randDirection = Math.random() > 0.5 ? 1 : -1;
   var blastData = {
@@ -589,6 +594,7 @@ function createBlast(point) {
     currentPath: path,
     endRadius: baseBlastRadius + heldDownTime * heldDownTimeRadiusMultiplier,
     extraSegmentOffsets: extraSegmentOffsets,
+    segmentNormals: segmentNormals,
     gradientStartX: ((Math.random() / 2) + 1) * randDirection,
     gradientStartY: ((Math.random() / 2) + 1) * randDirection
   };

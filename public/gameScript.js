@@ -454,7 +454,7 @@ function finishClearing() {
   );
   tweenRotation.then(function() {
     var tweenRotation2 = levelText.tweenTo(
-      { rotation: -2 * Math.PI },
+      { rotation: -3 * Math.PI },
       { duration: levelRotationAnimDuration, easing: 'easeInQuint' }
     );
     tweenRotation2.then(function () {

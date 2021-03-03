@@ -75,10 +75,6 @@ var isClearing = false;
 var clearingCircleAnimDuration = 800;
 var clearingCircleOffsetTime = 240;
 
-view.autoUpdate = false;
-view.update();
-view.autoUpdate = true;
-
 // create outer circle
 var outerPadding = 32;
 var outerCircleColor = '#000000';
@@ -108,7 +104,7 @@ var levelText = new PointText({
 	point: new Point(view.center.x, view.center.y - outerCircleRadius - 12),
 	justification: 'center',
 	fontSize: 16,
-  fontWeight: 200,
+  fontWeight: 150,
   fontFamily: 'Courier',
   strokeColor: '#000000',
   content: 'Level ' + level.toString(),
@@ -120,7 +116,7 @@ var helpIconQuestionMark = new PointText({
 	point: new Point(view.center.x + outerCircleRadius, 25),
 	justification: 'center',
 	fontSize: 24,
-  fontWeight: 200,
+  fontWeight: 150,
   fontFamily: 'Courier',
   strokeColor: clearingColor,
   fillColor: clearingColor,
@@ -150,7 +146,7 @@ function createHelpModalText(content) {
     point: new Point(0, 0),
     justification: 'center',
     fontSize: 16,
-    fontWeight: 200,
+    fontWeight: 150,
     fontFamily: 'Courier',
     strokeColor: '#000000',
     content: content
@@ -289,7 +285,7 @@ function animateHeldBlast(event) {
       heldBlast.currentPath.dashOffset += 1.5;
       heldBlast.currentPath.radius = heldBlastRadius;
     } else {
-      progressToNextPowerUp += event.delta / 4;
+      progressToNextPowerUp += event.delta / 2;
     }
     if (progressToNextPowerUp < 1) {
       innerCirclePath.fillColor = '#FFFFFF';

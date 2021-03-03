@@ -852,7 +852,7 @@ function moveInnerCircleWavePath() {
   waveLineY = innerCirclePath.bounds.bottom - progressToNextPowerUp * innerCirclePath.bounds.height;
   var innerCircleEndpoints = getInnerCircleEndpoints();
   if (innerCircleEndpoints.length === 2) {
-    innerCircleWavePathTop = new Path.Line(innerCircleEndpoints[0], innerCircleEndpoints[1]);
+    innerCircleWavePathTop = new Path.Line(innerCircleEndpoints[0] + {x: 0, y: -1}, innerCircleEndpoints[1] + {x: 0, y: -1});
     for (var i = 0; i < nInnerCircleWaveSegments; i++) {
       var newWavePointX = innerCircleEndpoints[1].x - (i / nInnerCircleWaveSegments) * innerCircleEndpoints[0].getDistance(innerCircleEndpoints[1]);
       innerCircleWavePathTop.insertSegment(1, new Point({ x: newWavePointX, y: waveLineY }));

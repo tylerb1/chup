@@ -3,7 +3,7 @@ var wiggles = [];
 var nObjectsCreated = 0; 
 var mouseDownLocation = null;
 var progressToNextPowerUp = 0;
-var nWigglesToNextPowerUp = 3;
+var nWigglesToNextPowerUp = 5;
 var nWigglesLetThrough = 0;
 var nWigglesCleared = 0;
 var lastNWigglesCleared = -1;
@@ -13,7 +13,7 @@ var levelColorAnimDuration = 1000;
 var levelRotationAnimDuration = 300;
 var isHolding = false;
 var heldDownTime = 0;
-var heldDownTimeRadiusMultiplier = 35;
+var heldDownTimeRadiusMultiplier = 42;
 var heldBlast = null;
 var holdingLocation = null;
 
@@ -75,7 +75,7 @@ var clearingCircleAnimDuration = 800;
 var clearingCircleOffsetTime = 240;
 
 // create outer circle
-var outerPadding = 24;
+var outerPadding = 32;
 var outerCircleColor = '#000000';
 var outerCircleRadius = window.innerWidth > window.innerHeight 
   ? (window.innerHeight / 2) - outerPadding 
@@ -92,7 +92,7 @@ createInnerCirclePath();
 
 // blast params
 var blasts = [];
-var baseBlastRadius = Math.floor(innerCircleRadius * 0.6);
+var baseBlastRadius = Math.floor(innerCircleRadius * 0.4);
 var initialBlastRadius = Math.floor(baseBlastRadius / 5);
 var blastStrokeWidth = 3;
 var blastTime = 1.5;
@@ -276,11 +276,11 @@ function animateHeldBlast(event) {
       heldBlast = null;
     }
   } else {
-    if (heldDownTime > 0.12 && !heldBlast) {
+    if (heldDownTime > 0.15 && !heldBlast) {
       createHeldBlast(mouseHoldingLocation);
     } else if (heldBlast) {
       var heldBlastRadius = baseBlastRadius + heldDownTime * heldDownTimeRadiusMultiplier;
-      heldBlast.currentPath.dashOffset += 0.5;
+      heldBlast.currentPath.dashOffset += 1.5;
       heldBlast.currentPath.radius = heldBlastRadius;
     } else {
       progressToNextPowerUp += (event.delta / 4);
@@ -409,7 +409,7 @@ function animateClearingCircles(delta) {
 function finishClearing() {
   // reset game params for new level
   progressToNextPowerUp = 0;
-  nWigglesToNextPowerUp = Math.ceil(1.2 * nWigglesToNextPowerUp);
+  nWigglesToNextPowerUp = Math.ceil(1.3 * nWigglesToNextPowerUp);
   spawnFrequencyVariation *= spawnFrequencyVariationMultiplier;
   baseTimeBetweenSpawns *= baseTimeBetweenSpawnsMultiplier;
   wiggleCurveTime *= wiggleCurveTimeMultiplier;
@@ -539,8 +539,7 @@ function onMouseUp(event) {
   } else if (
     !helpModalIsUp &&
     !isClearing && 
-    !helpIconCircle.contains(mouseDownLocation) &&
-    mouseUpLocation.getDistance(mouseDownLocation) < 10
+    !helpIconCircle.contains(mouseDownLocation)
   ) {
     createBlast(event.point);
   }
@@ -593,7 +592,7 @@ function createBlast(point) {
 
 function createHeldBlast(point) {
   var path = new Shape.Circle(point, initialBlastRadius);
-  path.strokeWidth = wiggleStrokeWidth;
+  path.strokeWidth = wiggleStrokeWidth - 1;
   path.strokeColor = clearingColor;
   path.dashArray = [15, 10];
   path.applyMatrix = false;
@@ -720,7 +719,7 @@ function redrawWiggleAlongPath(wiggle) {
     var destination = pathToDraw.getPointAt(pathToDraw.length);
     pathToDraw.strokeColor = getTweenedColorForPath(wiggle, origin, destination);
   } else {
-    pathToDraw.strokeColor = lightClearing;
+    pathToDraw.strokeColor = clearingColor;
   }
   pathToDraw.strokeWidth = wiggleStrokeWidth;
   pathToDraw.strokeCap = 'round';
@@ -1021,7 +1020,7 @@ function initiateClearingCircle(isInner) {
         radial: true
       },
       origin: view.center + { x: 0.5, y: -1 * radius - 0.5 },
-      destination: view.center + { x: -2, y: -1 * radius + 2 }
+      destination: view.center + { x: -1, y: -1 * radius + 1 }
     },
     applyMatrix: false,
   });

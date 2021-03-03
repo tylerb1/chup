@@ -11,8 +11,10 @@ canvas[resize] {
     height: 100%;
 }
 
-div {
+.bmc {
     position: absolute; 
-    bottom: 4px; 
-    left: calc(50% - 88px);
+    bottom: 6px; 
+    right: 6px;
+    width: 24px;
+    height: 32px;
 }

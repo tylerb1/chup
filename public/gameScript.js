@@ -849,7 +849,7 @@ function moveInnerCircleWavePath() {
   if (innerCircleWavePath) {
     innerCircleWavePath.remove();
   }
-  waveLineY = Math.ceil(innerCirclePath.bounds.bottom - progressToNextPowerUp * innerCirclePath.bounds.height + 4);
+  waveLineY = Math.ceil(innerCirclePath.bounds.bottom - progressToNextPowerUp * innerCirclePath.bounds.height - 3);
   var innerCircleEndpoints = getInnerCircleEndpoints();
   if (innerCircleEndpoints.length === 2) {
     innerCircleWavePathTop = new Path.Line(innerCircleEndpoints[0] + { x: 2, y: 0 }, innerCircleEndpoints[1] - { x: 2, y: 0 });
@@ -857,7 +857,7 @@ function moveInnerCircleWavePath() {
       var newWavePointX = innerCircleEndpoints[1].x - (i / nInnerCircleWaveSegments) * innerCircleEndpoints[0].getDistance(innerCircleEndpoints[1]);
       innerCircleWavePathTop.insertSegment(1, new Point({ x: newWavePointX, y: innerCircleEndpoints[0].y }));
     }
-    var bottomPoint = new Point({ x: view.center.x, y: view.center.y + innerCircleRadius - 2 });
+    var bottomPoint = new Point({ x: innerCirclePath.bounds.center.x, y: innerCirclePath.bounds.center.y + innerCircleRadius - 2 });
     innerCircleWavePathBottom = new Path.Arc(
       innerCircleEndpoints[0] + { x: 2, y: 0 },
       bottomPoint,

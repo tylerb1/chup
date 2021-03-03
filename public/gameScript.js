@@ -506,7 +506,7 @@ function animateInnerCircleWave(event) {
     destination: view.center + innerCircleRadius
   };
   innerCircleWavePath.fillRule = 'evenodd';
-  innerCircleWavePath.firstChild.smooth({ type: 'continuous' });
+  innerCircleWavePath.firstChild.smooth();
 }
 
 // MOUSE EVENTS

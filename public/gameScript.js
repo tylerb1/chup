@@ -26,7 +26,7 @@ var helpModalRectangle = null;
 var clickedOutOfHelpModal = false;
 
 // inner circle
-var innerCircleColor = '#AFD0BF';
+var innerCircleColor = new Color('#AFD0BF');
 var waveLineY = 0;
 var nInnerCircleWaveSegments = 4;
 var innerCircleWaveHeight = 0;
@@ -54,13 +54,15 @@ var timeToNextWiggle = (Math.random() * spawnFrequencyVariation) + baseTimeBetwe
 // intersection params
 var initialFallVelocity = 10;
 var wiggleFallRotation = 12;
-var clearingColor = '#5171A8';
-var wiggleFallColor = '#F0A202';
-var goodConfettiColor = '#F0A202';
-var badColor = '#B33951';
+var clearingColor = new Color('#5171A8');
+var wiggleFallColor = new Color('#F0A202');
+var goodConfettiColor = new Color('#F0A202');
+var badColor = new Color('#B33951');
+var whiteColor = new Color('#FFFFFF');
+var blackColor = new Color('#000000');
 var lightClearing = getTweenedColor(
   clearingColor, 
-  '#FFFFFF',
+  whiteColor,
   0.9
 );
 var confettiDuration = 600;
@@ -77,7 +79,7 @@ var clearingCircleOffsetTime = 240;
 
 // create outer circle
 var outerPadding = 32;
-var outerCircleColor = '#000000';
+var outerCircleColor = blackColor;
 var outerCircleRadius = window.innerWidth > window.innerHeight 
   ? (window.innerHeight / 2) - outerPadding 
   : (window.innerWidth / 2) - outerPadding;
@@ -106,7 +108,7 @@ var levelText = new PointText({
 	fontSize: 16,
   fontWeight: 150,
   fontFamily: 'Courier',
-  strokeColor: '#000000',
+  strokeColor: blackColor,
   content: 'Level ' + level.toString(),
   applyMatrix: false,
 });
@@ -127,7 +129,7 @@ var helpIconCircle = new Path.Circle({
   radius: 16,
   strokeColor: clearingColor,
   strokeWidth: 2,
-  fillColor: '#CCCCCC',
+  fillColor: new Color('#CCCCCC'),
   shadowColor: new Color(0, 0, 0),
   shadowBlur: 4,
   shadowOffset: new Point(2, 2)
@@ -148,7 +150,7 @@ function createHelpModalText(content) {
     fontSize: 16,
     fontWeight: 150,
     fontFamily: 'Courier',
-    strokeColor: '#000000',
+    strokeColor: blackColor,
     content: content
   });
   return helpModalText;
@@ -186,7 +188,7 @@ function createHelpModal() {
   helpModalOverlay = new Path.Rectangle({
     point: new Point(0, 0),
     size: view.size,
-    fillColor: '#AAAAAA',
+    fillColor: new Color('#AAAAAA'),
     opacity: 0.5
   });
   helpModalOverlay.onClick = onClickHelp;
@@ -194,7 +196,7 @@ function createHelpModal() {
   helpModalRectangle = new Path.Rectangle({
     point: new Point(view.center.x - helpModalText.bounds.width / 2 - 16, view.center.y - helpModalText.bounds.height / 2 - 8 ),
     size: new Size(text1.bounds.width + 32, helpImage3.bounds.bottom - text1.bounds.top + 16),
-    fillColor: '#FFFFFF',
+    fillColor: whiteColor,
     radius: 10
   });
 
@@ -288,7 +290,7 @@ function animateHeldBlast(event) {
       progressToNextPowerUp += event.delta / 2;
     }
     if (progressToNextPowerUp < 1) {
-      innerCirclePath.fillColor = '#FFFFFF';
+      innerCirclePath.fillColor = whiteColor;
       innerCirclePath.strokeWidth = innerCircleStrokeWidth;
       needToRecreateInnerCircle = true;
     }
@@ -309,7 +311,7 @@ function animateInnerCircleEdge(time) {
   );
   var lighterTweenedColor = getTweenedColor(
     tweenedColor, 
-    '#FFFFFF',
+    whiteColor,
     0.5
   );
   innerCirclePath.fillColor = {
@@ -347,16 +349,17 @@ function animateBlasts(delta) {
       }
 
       // tween blast color
-      var color = (blasts[i].progress / blastTime) < 0.5
-        ? getTweenedColor('#FFFFFF', clearingColor, easeOutCubic(normalizedProgress))
-        : getTweenedColor(clearingColor, '#FFFFFF', easeInCubic(normalizedProgress));
+      var color = normalizedProgress < 0.5
+        ? getTweenedColor(whiteColor, clearingColor, easeOutCubic(normalizedProgress))
+        : getTweenedColor(clearingColor, whiteColor, easeInCubic(normalizedProgress));
+      var gradientDistance = new Point({ x: newRadius * 2 * blasts[i].gradientStartX, y: newRadius * 2 * blasts[i].gradientStartY });
       var gradientColor = {
         gradient: {
           stops: [lightClearing, color],
           radial: true
         },
-        origin: blasts[i].center - {x: newRadius * 2 * blasts[i].gradientStartX, y: newRadius * 2 * blasts[i].gradientStartY },
-        destination: blasts[i].center + {x: newRadius * 2 * blasts[i].gradientStartX, y: newRadius * 2 * blasts[i].gradientStartY }
+        origin: blasts[i].center - gradientDistance,
+        destination: blasts[i].center + gradientDistance
       }
       path.fillColor = gradientColor;
       path.strokeWidth = blastStrokeWidth;
@@ -446,7 +449,7 @@ function finishClearing() {
   );
   tweenIntoColor.then(function() {
     levelText.tweenTo(
-      { strokeColor: '#000000', fillColor: '#000000', scaling: 1 },
+      { strokeColor: blackColor, fillColor: blackColor, scaling: 1 },
       { duration: levelColorAnimDuration, easing: 'easeInQuint' }
     );
   });
@@ -472,7 +475,7 @@ function finishClearing() {
 function createInnerCirclePath() {
   innerCirclePath = new Path.Circle(view.center, innerCircleRadius);
   innerCirclePath.bringToFront();
-  innerCirclePath.fillColor = '#FFFFFF';
+  innerCirclePath.fillColor = whiteColor;
   innerCirclePath.strokeColor = innerCircleColor;
   innerCirclePath.strokeWidth = innerCircleStrokeWidth;
   innerCirclePath.onClick = onClickInnerCircle;
@@ -502,7 +505,7 @@ function animateInnerCircleWave(event) {
   });
   innerCircleWavePath.fillColor = {
     gradient: {
-      stops: [innerCircleColor, '#FFFFFF']
+      stops: [innerCircleColor, whiteColor]
     },
     origin: view.center,
     destination: view.center + innerCircleRadius
@@ -676,7 +679,7 @@ function handleWiggleLetThrough(wiggle) {
     progressToNextPowerUp = 0;
   }
   if (progressToNextPowerUp < 1) {
-    innerCirclePath.fillColor = '#FFFFFF';
+    innerCirclePath.fillColor = whiteColor;
     innerCirclePath.strokeWidth = innerCircleStrokeWidth;
   }
   innerCirclePath.strokeColor = badColor;
@@ -775,39 +778,24 @@ function getTweenedColorForPath(wiggle, origin, destination) {
   };
 }
 
-// TODO: use Color object & its components in Paper.js to reduce tweening effort
 function getTweenedColor(startColor, endColor, progress) {
-  var r = getTweenedColorComponent('r', startColor, endColor, progress);
-  var g = getTweenedColorComponent('g', startColor, endColor, progress);
-  var b = getTweenedColorComponent('b', startColor, endColor, progress);
-  return '#' + r + g + b;
+  var r = getTweenedColorComponent(0, startColor, endColor, progress);
+  var g = getTweenedColorComponent(1, startColor, endColor, progress);
+  var b = getTweenedColorComponent(2, startColor, endColor, progress);
+  return new Color(r, g, b);
 }
 
 function getTweenedColorComponent(colorComponent, startColor, endColor, progress) {
-  var startIndex = 1;
-  if (colorComponent === 'g') {
-    startIndex = 3;
-  }
-  if (colorComponent === 'b') {
-    startIndex = 5;
-  }
-  var startColorNumber256 = parseInt(startColor[startIndex], 16) * 16;
-  var startColorNumber16 = parseInt(startColor[startIndex + 1], 16);
-  var startColorNumber = startColorNumber256 + startColorNumber16;
-  var endColorNumber256 = parseInt(endColor[startIndex], 16) * 16;
-  var endColorNumber16 = parseInt(endColor[startIndex + 1], 16);
-  var endColorNumber = endColorNumber256 + endColorNumber16;
+  var startColorComponent = startColor.components[colorComponent];
+  var endColorComponent = endColor.components[colorComponent];
   var diff = 0;
-  if (startColorNumber === endColorNumber) {
-    return startColor[startIndex] + startColor[startIndex + 1];
+  if (startColorComponent === endColorComponent) {
+    return startColorComponent;
   } else {
-    diff = endColorNumber - startColorNumber;
+    diff = endColorComponent - startColorComponent;
   }
-  var finalColorNumber = startColorNumber + Math.floor(progress * diff);
-  var secondHexNumber = finalColorNumber % 16;
-  var firstHexNumber = (finalColorNumber - secondHexNumber) / 16;
-  var hexString = firstHexNumber.toString(16) + secondHexNumber.toString(16);
-  return hexString;
+  var finalColorNumber = startColorComponent + progress * diff;
+  return finalColorNumber;
 }
 
 // FALLING WIGGLE FUNCTIONS

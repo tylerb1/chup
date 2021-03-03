@@ -210,7 +210,7 @@ var innerClearingCircleRadius = innerCircleRadius + 15;
 function onFrame(event) {
   if (!helpModalIsUp) {
     // allow or prevent clearing
-    canClear = progressToNextPowerUp >= 1 && !isClearing;
+    canClear = progressToNextPowerUp >= 100 && !isClearing;
     if (canClear) {
       innerCirclePath.strokeColor = null;
     }
@@ -229,7 +229,7 @@ function onFrame(event) {
     }
 
     // animate inner circle edge
-    if (progressToNextPowerUp >= 1) {
+    if (progressToNextPowerUp >= 100) {
       animateInnerCircleEdge(event.time);
     }
 
@@ -243,7 +243,7 @@ function onFrame(event) {
     }
 
     // animate wave in inner circle
-    if (progressToNextPowerUp > 0 && progressToNextPowerUp < 1) {
+    if (progressToNextPowerUp > 0 && progressToNextPowerUp < 100) {
       animateInnerCircleWave(event);
     }
 
@@ -265,7 +265,7 @@ function onFrame(event) {
 }
 
 function animateHeldBlast(event) {
-  progressToNextPowerUp -= (event.delta / 2);
+  progressToNextPowerUp -= Math.ceil((event.delta / 2) * 100);
   if (progressToNextPowerUp <= 0) {
     progressToNextPowerUp = 0;
     isHolding = false;
@@ -283,9 +283,9 @@ function animateHeldBlast(event) {
       heldBlast.currentPath.dashOffset += 1.5;
       heldBlast.currentPath.radius = heldBlastRadius;
     } else {
-      progressToNextPowerUp += (event.delta / 4);
+      progressToNextPowerUp += Math.ceil((event.delta / 4) * 100);
     }
-    if (progressToNextPowerUp < 1) {
+    if (progressToNextPowerUp < 100) {
       innerCirclePath.fillColor = '#FFFFFF';
       innerCirclePath.strokeWidth = innerCircleStrokeWidth;
       needToRecreateInnerCircle = true;
@@ -668,8 +668,8 @@ function handleWiggleLetThrough(wiggle) {
   });
   wiggles.splice(i, 1);
   nWigglesLetThrough += 1;
-  progressToNextPowerUp -= (2.0 / nWigglesToNextPowerUp);
-  if (progressToNextPowerUp < 1) {
+  progressToNextPowerUp -= Math.ceil((2.0 / nWigglesToNextPowerUp) * 100);
+  if (progressToNextPowerUp < 100) {
     innerCirclePath.fillColor = '#FFFFFF';
     innerCirclePath.strokeWidth = innerCircleStrokeWidth;
   }
@@ -825,7 +825,7 @@ function dropIntersectedWiggles(path, clearedByBlast) {
   Object.keys(wiggleIntersectionOffsets).forEach(function(id) {
     dropWiggle(id, wiggleIntersectionOffsets[id]);
     // animate inner circle edge if necessary
-    if (progressToNextPowerUp >= 1) {
+    if (progressToNextPowerUp >= 100) {
       innerCirclePath.strokeColor = null;
     } else if (clearedByBlast) {
       innerCirclePath.strokeColor = clearingColor;
@@ -849,13 +849,13 @@ function moveInnerCircleWavePath() {
   if (innerCircleWavePath) {
     innerCircleWavePath.remove();
   }
-  waveLineY = innerCirclePath.bounds.bottom - progressToNextPowerUp * innerCirclePath.bounds.height;
+  waveLineY = innerCirclePath.bounds.bottom - (progressToNextPowerUp / 100) * innerCirclePath.bounds.height;
   var innerCircleEndpoints = getInnerCircleEndpoints();
   if (innerCircleEndpoints.length === 2) {
     innerCircleWavePathTop = new Path.Line(innerCircleEndpoints[0] + {x: 2, y: 0 }, innerCircleEndpoints[1] - {x: 2, y: 0 });
     for (var i = 0; i < nInnerCircleWaveSegments; i++) {
       var newWavePointX = innerCircleEndpoints[1].x - (i / nInnerCircleWaveSegments) * innerCircleEndpoints[0].getDistance(innerCircleEndpoints[1]);
-      innerCircleWavePathTop.insertSegment(1, new Point({ x: newWavePointX, y: waveLineY }));
+      innerCircleWavePathTop.insertSegment(1, new Point({ x: newWavePointX, y: innerCircleEndpoints[0].y }));
     }
     var bottomPoint = new Point({ x: view.center.x, y: view.center.y + innerCircleRadius - 2 });
     innerCircleWavePathBottom = new Path.Arc(
@@ -898,9 +898,9 @@ function dropWiggle(id, offset) {
   var wiggleHitPath = wiggleHit.currentPath.clone();
 
   // increment progress to next power-up
-  progressToNextPowerUp += (1.0 / nWigglesToNextPowerUp);
-  if (progressToNextPowerUp >= 0.999 /* fixes rounding issues */) {
-    progressToNextPowerUp = 1;
+  progressToNextPowerUp += Math.ceil((1.0 / nWigglesToNextPowerUp) * 100);
+  if (progressToNextPowerUp >= 99.9 /* fixes rounding issues */) {
+    progressToNextPowerUp = 100;
   }
 
   // animate intersection point

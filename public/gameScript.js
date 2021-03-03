@@ -498,7 +498,6 @@ function animateInnerCircleWave(event) {
   innerCircleWavePath = new CompoundPath({
     children: [innerCircleWavePathTop, innerCircleWavePathBottom]
   });
-  innerCircleWavePath.smooth();
   innerCircleWavePath.fillColor = {
     gradient: {
       stops: [innerCircleColor, '#FFFFFF']
@@ -507,6 +506,8 @@ function animateInnerCircleWave(event) {
     destination: view.center + innerCircleRadius
   };
   innerCircleWavePath.fillRule = 'evenodd';
+  innerCircleWavePath.firstChild.smooth();
+  innerCircleWavePath.lastChild.smooth();
 }
 
 // MOUSE EVENTS

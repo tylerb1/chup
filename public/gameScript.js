@@ -161,13 +161,13 @@ function createHelpModal() {
   helpImage1.position = { x: view.center.x, y: text1.bounds.bottom + helpImage1.height / 8 };
 
   var text2 = createHelpModalText('Hold longer to widen\n blast (at a cost)');
-  text2.position = { x: view.center.x, y: helpImage1.bounds.bottom + 20 };
+  text2.position = { x: view.center.x, y: helpImage1.bounds.bottom + 24 };
   var helpImage2 = new Raster('step2');
   helpImage2.scale(0.25);
   helpImage2.position = { x: view.center.x, y: text2.bounds.bottom + helpImage2.height / 8 };
 
   var text3 = createHelpModalText('Tap inner circle\nwhen flashing');
-  text3.position = { x: view.center.x, y: helpImage2.bounds.bottom + 20 };
+  text3.position = { x: view.center.x, y: helpImage2.bounds.bottom + 24 };
   var helpImage3 = new Raster('step3');
   helpImage3.scale(0.25);
   helpImage3.position = { x: view.center.x, y: text3.bounds.bottom + helpImage3.height / 8 };

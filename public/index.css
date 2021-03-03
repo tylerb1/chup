@@ -3,7 +3,6 @@ body {
     height: 100%;
     width: 100%;
     margin: 0 auto;
-    padding: 0;
 }
 
 /* Scale canvas with resize attribute to full size */
@@ -11,7 +10,6 @@ canvas[resize] {
     width: 100%;
     height: 100%;
     margin: 0 auto;
-    padding: 0;
 }
 
 .bmc {

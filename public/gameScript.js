@@ -869,6 +869,7 @@ function moveInnerCircleWavePath() {
         innerCircleWavePathBottom
       ]
     });
+    innerCircleWavePath.blendmode = 'add';
     innerCircleWavePath.sendToBack();
     innerCircleWaveHeight = Math.pow(4 * ((innerCircleRadius - Math.abs(view.center.y - waveLineY)) / innerCircleRadius), 2);
   }

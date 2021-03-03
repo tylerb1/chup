@@ -492,7 +492,7 @@ function animateInnerCircleWave(event) {
     var sinus = Math.sin(event.time * 3 + i);
     segment.point.y = sinus * innerCircleWaveHeight + waveLineY;
   }
-  innerCircleWavePathTop.smooth();
+  //innerCircleWavePathTop.smooth();
   if (innerCircleWavePath) {
     innerCircleWavePath.remove();
   }
@@ -849,7 +849,7 @@ function moveInnerCircleWavePath() {
   if (innerCircleWavePath) {
     innerCircleWavePath.remove();
   }
-  waveLineY = innerCirclePath.bounds.bottom - (progressToNextPowerUp / 100) * innerCirclePath.bounds.height;
+  waveLineY = Math.ceil(innerCirclePath.bounds.bottom - (progressToNextPowerUp / 100) * innerCirclePath.bounds.height);
   var innerCircleEndpoints = getInnerCircleEndpoints();
   if (innerCircleEndpoints.length === 2) {
     innerCircleWavePathTop = new Path.Line(innerCircleEndpoints[0] + {x: 2, y: 0 }, innerCircleEndpoints[1] - {x: 2, y: 0 });
@@ -869,7 +869,7 @@ function moveInnerCircleWavePath() {
         innerCircleWavePathBottom
       ]
     });
-    innerCircleWavePath.blendmode = 'add';
+    innerCircleWavePath.blendMode = 'add';
     innerCircleWavePath.sendToBack();
     innerCircleWaveHeight = Math.pow(4 * ((innerCircleRadius - Math.abs(view.center.y - waveLineY)) / innerCircleRadius), 2);
   }

@@ -592,9 +592,9 @@ function createBlast(point) {
 
 function createHeldBlast(point) {
   var path = new Shape.Circle(point, initialBlastRadius);
-  path.strokeWidth = wiggleStrokeWidth - 1;
+  path.strokeWidth = wiggleStrokeWidth + 1;
   path.strokeColor = clearingColor;
-  path.dashArray = [15, 10];
+  path.dashArray = [15, 15];
   path.applyMatrix = false;
   var blastData = {
     id: 'hb' + nObjectsCreated.toString(), 

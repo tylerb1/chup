@@ -205,7 +205,7 @@ function createHelpModal() {
 var outerClearingCircleRadius = outerCircleRadius - 15;
 var innerClearingCircleRadius = innerCircleRadius + 15;
 
-view.update();
+view.requestUpdate();
 
 // ANIMATE GAME
 

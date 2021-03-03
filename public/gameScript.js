@@ -74,6 +74,8 @@ var isClearing = false;
 var clearingCircleAnimDuration = 800;
 var clearingCircleOffsetTime = 240;
 
+view.requestUpdate();
+
 // create outer circle
 var outerPadding = 32;
 var outerCircleColor = '#000000';
@@ -204,8 +206,6 @@ function createHelpModal() {
 // set clearing circle radii
 var outerClearingCircleRadius = outerCircleRadius - 15;
 var innerClearingCircleRadius = innerCircleRadius + 15;
-
-view.requestUpdate();
 
 // ANIMATE GAME
 
